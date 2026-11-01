@@ -418,9 +418,7 @@ button.ladrilho:focus-visible {
 }
 
 /*
-  Canto superior do foco: volume da transmissão, selo e tela cheia.
-  Estica na largura do tile para o deslizante encolher com ele; o que sobra
-  fica no fim, então selo e tela cheia continuam no canto quando não há volume.
+  Canto superior do foco: `⋯`, selo e tela cheia, alinhados ao fim.
 */
 .cantoDoFoco {
   position: absolute;
@@ -430,13 +428,6 @@ button.ladrilho:focus-visible {
   align-items: center;
   justify-content: flex-end;
   gap: var(--vx-space-2);
-}
-.volumeDoFoco {
-  min-inline-size: 0;
-  flex: 1 1 auto;
-  padding: var(--vx-space-2);
-  border-radius: var(--vx-radius-sm);
-  background: var(--vx-scrim);
 }
 .seloDeQualidade {
   padding: var(--vx-space-1) var(--vx-space-2);
@@ -469,6 +460,17 @@ button.ladrilho:focus-visible {
 .opcoesDoLadrilho[data-state="open"] {
   opacity: 1;
 }
+.opcoesDoFoco {
+  background: var(--vx-scrim);
+  opacity: 0;
+}
+.telaDoFoco:hover .opcoesDoFoco,
+.telaDoFoco:focus-within .opcoesDoFoco,
+.opcoesDoFoco[data-state="open"] {
+  opacity: 1;
+}
 .menuDoParticipante {
+  display: grid;
+  gap: var(--vx-space-3);
   inline-size: 240px;
 }

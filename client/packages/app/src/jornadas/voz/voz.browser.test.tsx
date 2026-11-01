@@ -292,9 +292,9 @@ describe("palco em tela cheia", () => {
     expect(pegar("[data-testid='foco-do-palco']")!.dataset.pessoa).toBe("U1");
     expect(pegar("[data-testid='foco-do-palco']")!.textContent).toContain(voz.palco.recebendoQuadro);
     expect(pegar("[data-testid='foco-do-palco']")!.textContent).toContain("AO VIVO");
-    await expect
-      .element(page.getByRole("slider", { name: voz.palco.volumeDaTransmissao("Ana") }))
-      .toBeVisible();
+    // O volume da transmissão NÃO mora sobre o vídeo: só dentro do menu `⋯`.
+    expect(pegar("[data-testid='foco-do-palco']")!.querySelector("input[type='range']")).toBeNull();
+    expect(document.querySelector("[data-testid='volume-da-transmissao']")).toBeNull();
     expect(pegar("[data-testid='tira-do-palco']")!.querySelector("input[type='range']")).toBeNull();
 
     // A tira tem as pessoas que não são o foco e a miniatura da outra transmissão.
@@ -306,28 +306,68 @@ describe("palco em tela cheia", () => {
   });
 
   describe("volume da transmissão", () => {
-    const deslizante = () => page.getByRole("slider", { name: voz.palco.volumeDaTransmissao("Ana") });
+    const deslizante = () => page.getByRole("slider", { name: voz.palco.volumeDaTransmissao });
+    const volumeDaVoz = () => page.getByRole("slider", { name: voz.palco.volumeDaVoz });
     const elemento = () => deslizante().element() as HTMLInputElement;
+    const sliders = () => document.querySelectorAll("input[type='range']").length;
 
     async function abrirTransmissao(comSom: boolean) {
       await abrir([participante("U1", { estado: "tela" }), participante("U3")]);
       entrarNoPalco();
       if (comSom) definirChamada({ telaComSom: ["U1"] });
+      await expect.poll(() => pegar("[data-testid='foco-do-palco']")).not.toBeNull();
+    }
+    async function abrirMenuDoFoco() {
+      await page
+        .getByRole("button", { name: voz.palco.opcoesDe("Ana") })
+        .first()
+        .click();
       await expect.element(deslizante()).toBeVisible();
     }
 
+    it("não há deslizante sobre o vídeo; ele só existe dentro do menu", async () => {
+      await abrirTransmissao(true);
+      expect(sliders()).toBe(0);
+      await abrirMenuDoFoco();
+      const menu = pegar("[data-testid='menu-do-participante']")!;
+      expect(sliders()).toBe(2);
+      expect(menu.querySelectorAll("input[type='range']").length).toBe(2);
+      expect(pegar("[data-testid='foco-do-palco']")!.querySelector("input[type='range']")).toBeNull();
+    });
+
+    it("o ⋯ do foco é discreto, mas alcançável pelo teclado", async () => {
+      await abrirTransmissao(true);
+      const botao = pegar("[data-testid='foco-do-palco'] [data-testid='opcoes-do-participante']") as HTMLElement;
+      expect(getComputedStyle(botao).opacity).toBe("0");
+      botao.focus();
+      await expect.poll(() => getComputedStyle(botao).opacity).toBe("1");
+      await userEvent.keyboard("{Enter}");
+      await expect.element(deslizante()).toBeVisible();
+    });
+
+    it("quem não transmite tem só o volume da voz", async () => {
+      await abrirTransmissao(true);
+      const eva = ladrilhos().find((l) => l.dataset.pessoa === "U3")!;
+      eva.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+      await expect.element(volumeDaVoz()).toBeVisible();
+      expect(sliders()).toBe(1);
+      expect(deslizante().elements().length).toBe(0);
+    });
+
     it("sem som, fica desligado e diz por quê; com som, liga", async () => {
       await abrirTransmissao(false);
+      await abrirMenuDoFoco();
       await expect.element(deslizante()).toBeDisabled();
       await expect.element(deslizante()).toHaveAccessibleDescription(voz.palco.transmissaoSemSom);
 
       definirChamada({ telaComSom: ["U1"] });
       await expect.element(deslizante()).toBeEnabled();
-      expect(pegar("[data-testid='volume-da-transmissao']")!.textContent).not.toContain(voz.palco.transmissaoSemSom);
+      expect(pegar("[data-testid='menu-do-participante']")!.textContent).not.toContain(voz.palco.transmissaoSemSom);
     });
 
     it("vai de 0% a 300% pelo teclado, de 5 em 5, com marca em 100%", async () => {
       await abrirTransmissao(true);
+      await abrirMenuDoFoco();
       const el = elemento();
       expect(el.min).toBe("0");
       expect(el.max).toBe("300");
@@ -346,11 +386,9 @@ describe("palco em tela cheia", () => {
       await expect.element(deslizante()).toHaveAttribute("aria-valuetext", "0%");
     });
 
-    it("o menu da pessoa muda a VOZ dela e não a transmissão, e vice-versa", async () => {
+    it("voz (0–100%) e transmissão (0–300%) são independentes no mesmo menu", async () => {
       await abrirTransmissao(true);
-      const volumeDaVoz = () => page.getByRole("slider", { name: voz.palco.volumeDe("Ana") });
-
-      await page.getByRole("button", { name: voz.palco.opcoesDe("Ana") }).click();
+      await abrirMenuDoFoco();
       await expect.element(volumeDaVoz()).toBeVisible();
       const vozEl = volumeDaVoz().element() as HTMLInputElement;
       expect(vozEl.max).toBe("100");
@@ -361,18 +399,19 @@ describe("palco em tela cheia", () => {
       await userEvent.keyboard("{Home}");
       await expect.poll(() => lerVolume("U1")).toBe(0);
       expect(lerVolumeDaTransmissao("U1")).toBe(100);
-      await userEvent.keyboard("{Escape}");
-      await expect.poll(() => document.querySelector("[data-testid='menu-do-participante']")).toBeNull();
 
       elemento().focus();
       await userEvent.keyboard("{End}");
       await expect.poll(() => lerVolumeDaTransmissao("U1")).toBe(300);
       expect(lerVolume("U1")).toBe(0);
 
+      await userEvent.keyboard("{Escape}");
+      await expect.poll(() => document.querySelector("[data-testid='menu-do-participante']")).toBeNull();
+
       // Na tira, o botão direito no ladrilho abre o menu daquela pessoa.
       const eva = ladrilhos().find((l) => l.dataset.pessoa === "U3")!;
       eva.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
-      const volumeDaEva = page.getByRole("slider", { name: voz.palco.volumeDe("Eva") });
+      const volumeDaEva = volumeDaVoz();
       await expect.element(volumeDaEva).toBeVisible();
       (volumeDaEva.element() as HTMLInputElement).focus();
       await userEvent.keyboard("{Home}");
@@ -383,6 +422,7 @@ describe("palco em tela cheia", () => {
 
     it("o mouse muda o valor, e ele sobrevive a fechar e abrir de novo", async () => {
       await abrirTransmissao(true);
+      await abrirMenuDoFoco();
       const caixa = elemento().getBoundingClientRect();
       // Clique perto do fim do trilho: bem acima de 100%.
       await deslizante().click({ position: { x: Math.round(caixa.width * 0.9), y: Math.round(caixa.height / 2) } });
@@ -394,9 +434,10 @@ describe("palco em tela cheia", () => {
       desmontar();
       fecharPalco();
       await abrirTransmissao(true);
+      await abrirMenuDoFoco();
       await expect.element(deslizante()).toHaveAttribute("aria-valuetext", `${String(escolhido)}%`);
     });
-  });
+ });
 
   it("a faixa tem miniaturas 16:9 de altura fixa, centradas e sem esticar", async () => {
     await abrir([

@@ -31,6 +31,8 @@ export interface PessoaDoPalco {
   readonly surdo: boolean;
   readonly camera: boolean;
   readonly proprio: boolean;
+  /** Está compartilhando a tela: o menu dela ganha o volume da transmissão. */
+  readonly transmitindo?: boolean;
 }
 
 /**
@@ -98,7 +100,13 @@ export function LadrilhoDePessoa({
         {estado ? `${nome} · ${estado.toLowerCase()}` : nome}
       </span>
       {!pessoa.proprio && (
-        <MenuDoParticipante userId={pessoa.id} nome={nome} aberto={menuAberto} aoMudar={setMenuAberto} />
+        <MenuDoParticipante
+          userId={pessoa.id}
+          nome={nome}
+          transmite={pessoa.transmitindo === true}
+          aberto={menuAberto}
+          aoMudar={setMenuAberto}
+        />
       )}
     </div>
   );
@@ -106,31 +114,35 @@ export function LadrilhoDePessoa({
 
 function MenuDeQuemTransmite({ userId, nome }: { userId: string; nome: string }) {
   const [aberto, setAberto] = useState(false);
-  return <MenuDoParticipante userId={userId} nome={nome} aberto={aberto} aoMudar={setAberto} noCanto />;
+  return <MenuDoParticipante userId={userId} nome={nome} aberto={aberto} aoMudar={setAberto} transmite noCanto />;
 }
 
 /**
- * O menu de uma pessoa na sala: o volume da VOZ dela, só para você (0–100%).
+ * O menu de uma pessoa na sala: o volume da VOZ dela (0–100%) e, se ela
+ * transmite a tela, o volume da TRANSMISSÃO (0–300%) — os dois só para você.
  *
  * Abre pelo `⋯` do canto (teclado e toque) ou pelo botão direito no ladrilho.
  * É popover e não menu do Radix: o menu só deixa as setas andarem entre itens,
  * e um deslizante dentro dele ficaria inalcançável pelo teclado.
  *
- * ⚠ Eixo separado do volume da TRANSMISSÃO, que mora no canto do foco: a voz
- * e o som da tela de uma pessoa pedem ajustes opostos com frequência.
+ * ⚠ Eixos separados: a voz e o som da tela de uma pessoa pedem ajustes opostos
+ * com frequência. O da transmissão NÃO mora sobre o vídeo — cobria o topo dele.
  */
 function MenuDoParticipante({
   userId,
   nome,
   aberto,
   aoMudar,
+  transmite,
   noCanto = false,
 }: {
   userId: string;
   nome: string;
+  /** Mostra também o volume da transmissão. */
+  transmite: boolean;
   aberto: boolean;
   aoMudar: (aberto: boolean) => void;
-  /** No canto do foco fica sempre visível, ao lado do volume da transmissão. */
+  /** No canto do foco, discreto: só no hover ou no foco do vídeo. */
   noCanto?: boolean;
 }) {
   const valor = useSyncExternalStore(
@@ -145,13 +157,13 @@ function MenuDoParticipante({
           tamanho="sm"
           icone={<MaisHorizontal />}
           aria-label={voz.palco.opcoesDe(nome)}
-          className={noCanto ? undefined : css.opcoesDoLadrilho}
+          className={noCanto ? css.opcoesDoFoco : css.opcoesDoLadrilho}
           data-testid="opcoes-do-participante"
         />
       </GatilhoDoPopover>
       <ConteudoDoPopover className={css.menuDoParticipante} data-testid="menu-do-participante">
         <Deslizante
-          rotulo={voz.palco.volumeDe(nome)}
+          rotulo={voz.palco.volumeDaVoz}
           valor={valor}
           min={0}
           max={VOLUME_MAXIMO}
@@ -161,8 +173,47 @@ function MenuDoParticipante({
             definirVolume(userId, proximo);
           }}
         />
+        {transmite && <VolumeDaTransmissao userId={userId} />}
       </ConteudoDoPopover>
     </Popover>
+  );
+}
+
+/** Marca no trilho: onde está o som como a pessoa transmitiu. */
+const MARCAS_DO_VOLUME = [VOLUME_DA_TRANSMISSAO_PADRAO] as const;
+
+/**
+ * O volume do SOM da transmissão, de 0% a 300%, só para quem assiste.
+ *
+ * Lê o valor GUARDADO, não o efetivo: surdo zera o que se ouve sem apagar o
+ * ajuste, e o deslizante é o jeito de voltar de um 0 que ficou salvo.
+ *
+ * ⚠ **Sem som, o controle fica DESLIGADO com o motivo, e não some.** O som da
+ * tela é opcional (a caixa do seletor do sistema), e pode chegar depois do
+ * vídeo; um controle ausente não diz nada — desligado com a frase responde
+ * "por que não ouço?".
+ */
+function VolumeDaTransmissao({ userId }: { userId: string }) {
+  const valor = useSyncExternalStore(
+    (avisar) => assinarVolumeDaTransmissao(userId, avisar),
+    () => lerVolumeDaTransmissao(userId),
+  );
+  const comSom = useSyncExternalStore(assinarChamada, () => lerChamada().telaComSom.includes(userId));
+  return (
+    <Deslizante
+      rotulo={voz.palco.volumeDaTransmissao}
+      valor={valor}
+      min={0}
+      max={VOLUME_DA_TRANSMISSAO_MAXIMO}
+      passo={VOLUME_DA_TRANSMISSAO_PASSO}
+      marcas={MARCAS_DO_VOLUME}
+      texto={`${String(valor)}%`}
+      disabled={!comSom}
+      descricao={comSom ? undefined : voz.palco.transmissaoSemSom}
+      aoMudar={(proximo) => {
+        definirVolumeDaTransmissao(userId, proximo);
+      }}
+    />
   );
 }
 
@@ -230,7 +281,6 @@ export function LadrilhoDeTela({
       )}
       {papel === "foco" && (qualidade !== undefined || telaCheia || !pessoa.proprio) && (
         <span className={css.cantoDoFoco}>
-          {!pessoa.proprio && <VolumeDaTransmissao userId={pessoa.id} nome={nome} />}
           {/* Quem está em foco não aparece na tira: o menu dela mora aqui. */}
           {!pessoa.proprio && <MenuDeQuemTransmite userId={pessoa.id} nome={nome} />}
           {qualidade !== undefined && (
@@ -281,48 +331,6 @@ export function LadrilhoDeTela({
     >
       {conteudo}
     </div>
-  );
-}
-
-/** Marca no trilho: onde está o som como a pessoa transmitiu. */
-const MARCAS_DO_VOLUME = [VOLUME_DA_TRANSMISSAO_PADRAO] as const;
-
-/**
- * O volume do SOM da transmissão em foco, de 0% a 300%, só para quem assiste.
- *
- * Lê o valor GUARDADO, não o efetivo: surdo zera o que se ouve sem apagar o
- * ajuste, e o deslizante é o jeito de voltar de um 0 que ficou salvo. A voz
- * da pessoa é outro eixo e não muda aqui.
- *
- * ⚠ **Sem som, o controle fica DESLIGADO com o motivo, e não some.** O som da
- * tela é opcional (a caixa do seletor do sistema), e pode chegar depois do
- * vídeo; sumir e aparecer faria o canto pular sob o ponteiro. E um controle
- * ausente não diz nada — desligado com a frase responde "por que não ouço?".
- */
-function VolumeDaTransmissao({ userId, nome }: { userId: string; nome: string }) {
-  const valor = useSyncExternalStore(
-    (avisar) => assinarVolumeDaTransmissao(userId, avisar),
-    () => lerVolumeDaTransmissao(userId),
-  );
-  /* Booleano: a chamada acorda por muita coisa, e só a troca disto re-renderiza. */
-  const comSom = useSyncExternalStore(assinarChamada, () => lerChamada().telaComSom.includes(userId));
-  return (
-    <span className={css.volumeDoFoco} data-testid="volume-da-transmissao">
-      <Deslizante
-        rotulo={voz.palco.volumeDaTransmissao(nome)}
-        valor={valor}
-        min={0}
-        max={VOLUME_DA_TRANSMISSAO_MAXIMO}
-        passo={VOLUME_DA_TRANSMISSAO_PASSO}
-        marcas={MARCAS_DO_VOLUME}
-        texto={`${String(valor)}%`}
-        disabled={!comSom}
-        descricao={comSom ? undefined : voz.palco.transmissaoSemSom}
-        aoMudar={(proximo) => {
-          definirVolumeDaTransmissao(userId, proximo);
-        }}
-      />
-    </span>
   );
 }
 
