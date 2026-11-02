@@ -1886,12 +1886,23 @@ async function transmitir(
       comAudioDaTela(escolha.opcoes),
       publicacaoDe(escolha.qualidade),
     );
-    /* A taxa de "Fonte" só pode ser pedida aqui (ver `capturaDe`); nas outras
-       é repetir o que a captura já pediu, e não custa nada. Falhar não derruba
-       a transmissão — ela segue no que o navegador negociou. */
-    await faixaDeTela()
-      ?.applyConstraints(constraintsDe(escolha.qualidade))
-      .catch(() => undefined);
+    /*
+      ⚠ **Não reaplicar constraints numa captura que já nasceu com taxa.**
+      `getDisplayMedia` já recebeu o `frameRate` (ver `capturaDe`). Um
+      `applyConstraints` logo em seguida reinicia o capturador do Chrome, e a
+      transmissão — pior na primeira, com o capturador frio — passa a entregar
+      quase nenhum quadro, em qualquer qualidade pedida. Trocar no HUD continua
+      aplicando: aí a faixa já está no ar e a pessoa pediu a troca.
+
+      "Fonte" é a exceção. Sem `resolution` o LiveKit injeta 1080p30 e descarta
+      a taxa, então ela só existe neste `applyConstraints`. Falhar não derruba
+      a transmissão — ela segue no que o navegador negociou.
+    */
+    if (ALTURA_DE[escolha.qualidade.resolucao] === undefined) {
+      await faixaDeTela()
+        ?.applyConstraints(constraintsDe(escolha.qualidade))
+        .catch(() => undefined);
+    }
     definirQualidadeEscolhida(escolha.qualidade);
     /* Antes de ler `telaAudio` abaixo: é esta publicação que decide se há som. */
     if (escolha.audioDeJanela) await publicarAudioDaJanela(p);
@@ -2319,6 +2330,27 @@ function publicacaoDe(q: QualidadeDaTela): TrackPublishOptions {
     degradationPreference: pedeMovimento(q)
       ? "maintain-framerate"
       : "maintain-resolution",
+    /*
+      ⚠ **Uma camada, um codec.** O padrão do LiveKit é `simulcast: true`: a
+      tela sai na resolução pedida E numa cópia pela metade, na mesma taxa.
+      O Chrome codifica as duas o tempo todo — e no Firefox a camada de baixo
+      frequentemente não manda quadro nenhum. Trocar taxa ou resolução não
+      desliga a segunda, e é por isso que toda qualidade travava igual, pior
+      na primeira, com os dois codificadores frios.
+
+      `backupCodec: false` fecha o outro caminho: o padrão `true` publica um
+      segundo codec quando o primário não é VP8 e, no ato, liga `dynacast` na
+      sala. Camada sem assinante fica pausada — a primeira transmissão congela
+      até alguém assistir. VP8 é o codec que não cai no teto de ~5 fps do
+      `L1T3` (o que o LiveKit força em tela com VP9/AV1). Se o servidor não
+      oferece VP8, o próprio LiveKit cai para o primeiro codec da lista.
+
+      Quem assiste deixa de escolher camada espacial: a miniatura e o PiP
+      baixam a mesma faixa do foco. "Só áudio" continua cortando o vídeo.
+    */
+    simulcast: false,
+    backupCodec: false,
+    videoCodec: "vp8",
   };
 }
 
