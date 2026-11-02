@@ -325,6 +325,14 @@ describe("palco em tela cheia", () => {
       await expect.element(deslizante()).toBeVisible();
     }
 
+    it("o botão direito no vídeo em foco abre o menu", async () => {
+      await abrirTransmissao(true);
+      pegar("[data-testid='foco-do-palco']")!.dispatchEvent(
+        new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+      );
+      await expect.element(deslizante()).toBeVisible();
+    });
+
     it("não há deslizante sobre o vídeo; ele só existe dentro do menu", async () => {
       await abrirTransmissao(true);
       expect(sliders()).toBe(0);

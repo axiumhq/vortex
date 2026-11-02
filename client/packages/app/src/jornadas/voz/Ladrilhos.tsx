@@ -112,16 +112,12 @@ export function LadrilhoDePessoa({
   );
 }
 
-function MenuDeQuemTransmite({ userId, nome }: { userId: string; nome: string }) {
-  const [aberto, setAberto] = useState(false);
-  return <MenuDoParticipante userId={userId} nome={nome} aberto={aberto} aoMudar={setAberto} transmite noCanto />;
-}
-
 /**
  * O menu de uma pessoa na sala: o volume da VOZ dela (0–100%) e, se ela
  * transmite a tela, o volume da TRANSMISSÃO (0–300%) — os dois só para você.
  *
- * Abre pelo `⋯` do canto (teclado e toque) ou pelo botão direito no ladrilho.
+ * Abre pelo `⋯` do canto (teclado e toque), pelo botão direito no ladrilho
+ * e pelo botão direito no vídeo em foco.
  * É popover e não menu do Radix: o menu só deixa as setas andarem entre itens,
  * e um deslizante dentro dele ficaria inalcançável pelo teclado.
  *
@@ -239,6 +235,7 @@ export function LadrilhoDeTela({
 }) {
   const faixa = useFaixaDeVideo(pessoa.id, "tela");
   const alvo = useRef<HTMLDivElement>(null);
+  const [menuAberto, setMenuAberto] = useState(false);
   useAssinaturaDeVideo(alvo, pessoa.id, "tela", papel, pessoa.proprio);
   const nome = pessoa.nome || salas.alguem;
   const rotulo = pessoa.proprio ? voz.palco.suaTela : voz.palco.telaDe(nome);
@@ -282,7 +279,16 @@ export function LadrilhoDeTela({
       {papel === "foco" && (qualidade !== undefined || telaCheia || !pessoa.proprio) && (
         <span className={css.cantoDoFoco}>
           {/* Quem está em foco não aparece na tira: o menu dela mora aqui. */}
-          {!pessoa.proprio && <MenuDeQuemTransmite userId={pessoa.id} nome={nome} />}
+          {!pessoa.proprio && (
+            <MenuDoParticipante
+              userId={pessoa.id}
+              nome={nome}
+              aberto={menuAberto}
+              aoMudar={setMenuAberto}
+              transmite
+              noCanto
+            />
+          )}
           {qualidade !== undefined && (
             <span className={css.seloDeQualidade} data-testid="selo-de-qualidade">
               {qualidade}
@@ -328,6 +334,14 @@ export function LadrilhoDeTela({
       aria-label={rotulo}
       data-testid="foco-do-palco"
       data-pessoa={pessoa.id}
+      onContextMenu={
+        pessoa.proprio
+          ? undefined
+          : (e) => {
+              e.preventDefault();
+              setMenuAberto(true);
+            }
+      }
     >
       {conteudo}
     </div>
