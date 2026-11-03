@@ -95,7 +95,7 @@ jobs:
         with:
           client-id: ${{ secrets.CI_APP_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
-          owner: enzolaOps
+          owner: ${{ github.repository_owner }}
           repositories: vortex
 
       - name: Wait for the queue to settle, classify changes, and publish
