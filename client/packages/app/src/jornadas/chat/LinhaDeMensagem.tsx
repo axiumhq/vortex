@@ -16,6 +16,7 @@ import { CitacaoDeResposta } from "./CitacaoDeResposta";
 import { CorpoDaMensagem } from "./CorpoDaMensagem";
 import { EmbedsDaMensagem } from "./EmbedsDaMensagem";
 import { EditorInline } from "./EditorInline";
+import { EnqueteDaMensagem } from "./EnqueteDaMensagem";
 import { FraseDeSistema } from "./FraseDeSistema";
 import { useEditandoEsta } from "./hooks";
 import linha from "./Linha.module.css";
@@ -104,6 +105,7 @@ function LinhaBase({ id, servidorId, grupo }: LinhaDeMensagemProps) {
             onMaisAcoes={(e) => abrirMenuDaMensagem(e.currentTarget)}
             rodape={
               <>
+                {m.enquete && <EnqueteDaMensagem messageId={id} channelId={m.channelId} enquete={m.enquete} />}
                 {m.anexos.length > 0 && <AnexosDaMensagem anexos={m.anexos} mensagemId={id} />}
                 {previas && m.embeds.length > 0 && <EmbedsDaMensagem embeds={m.embeds} servidorId={servidorId} />}
                 {temRodape(m) && <RodapeDaMensagem m={m} podeReagir={podeReagir} />}
