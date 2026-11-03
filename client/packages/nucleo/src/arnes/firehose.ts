@@ -13,6 +13,7 @@
 import { decodeTime, monotonicFactory, ulid } from "ulid";
 
 import { definirEnqueteBruta, lerEuDasEnquetes } from "../store/enquetes";
+import { definirFuncoesDoArnes } from "../sdk/funcoes";
 import { registrarFigurinhaLocal } from "../sdk/figurinhasDeMensagem";
 import { FIGURINHAS_DO_ARNES, semearExpressoesDoArnes } from "./expressoesDoArnes";
 import {
@@ -1805,6 +1806,8 @@ export async function seed(count: number, chunk = 250): Promise<string[]> {
   // Carga em massa e chegada incremental são caminhos diferentes. Misturar os
   // dois dá duas fontes competindo pela mesma lista.
   ensureWorld();
+  /* O arnês simula um servidor com enquetes (`features.vortex`). */
+  definirFuncoesDoArnes(["polls"]);
 
   const ids: string[] = [];
 
