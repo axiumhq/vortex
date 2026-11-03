@@ -105,7 +105,15 @@ function LinhaBase({ id, servidorId, grupo }: LinhaDeMensagemProps) {
             onMaisAcoes={(e) => abrirMenuDaMensagem(e.currentTarget)}
             rodape={
               <>
-                {m.enquete && <EnqueteDaMensagem messageId={id} channelId={m.channelId} enquete={m.enquete} />}
+                {m.enquete && (
+                  <EnqueteDaMensagem
+                    messageId={id}
+                    channelId={m.channelId}
+                    servidorId={servidorId}
+                    autorId={m.authorId}
+                    enquete={m.enquete}
+                  />
+                )}
                 {m.anexos.length > 0 && <AnexosDaMensagem anexos={m.anexos} mensagemId={id} />}
                 {previas && m.embeds.length > 0 && <EmbedsDaMensagem embeds={m.embeds} servidorId={servidorId} />}
                 {temRodape(m) && <RodapeDaMensagem m={m} podeReagir={podeReagir} />}
