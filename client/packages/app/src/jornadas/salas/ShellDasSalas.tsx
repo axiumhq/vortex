@@ -5,6 +5,7 @@ import { useColunaDeSalas, useLocal, useProntidao, useServerIds } from "nucleo/s
 import { useEffect, useRef, type ReactNode } from "react";
 
 import { ShellDoApp } from "../../shell";
+import { AvisoDeEmergencia } from "../admin/AvisoDeEmergencia";
 import { useBusca } from "../busca/hooks";
 import { PainelDeBusca } from "../busca/PainelDeBusca";
 import { useFixados } from "../fixados/hooks";
@@ -67,6 +68,7 @@ export function ShellDasSalas({ rodapeDasSalas }: { rodapeDasSalas?: ReactNode }
     <>
     <ShellDoApp
       chaveDoLugar={JSON.stringify(local)}
+      avisos={serverId !== undefined ? <AvisoDeEmergencia key={serverId} serverId={serverId} /> : undefined}
       dock={<ConteudoDaDock />}
       salas={<ColunaConectada rodape={rodapeDasSalas} />}
       area={<AreaConectada />}

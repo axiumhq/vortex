@@ -2,7 +2,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { userEvent } from "vitest/browser";
-import { toast } from "nucleo/ui-logica/toastStore";
+import { dispensarToast, toast } from "nucleo/ui-logica/toastStore";
 
 import "../../tema/theme.css";
 import { Avisos } from "./Avisos";
@@ -135,5 +135,35 @@ describe("Avisos", () => {
     await expect.poll(() => document.body.textContent).toContain("Convite copiado");
     await userEvent.click(pegar('[aria-label="Dispensar aviso"]')!);
     await expect.poll(() => document.body.textContent).not.toContain("Convite copiado");
+  });
+
+  it("a área dos avisos só pega o ponteiro em cima de um aviso, nunca no vão entre eles", async () => {
+    // Um alvo de tela cheia por baixo: o que não for aviso tem de chegar até ele.
+    montar(
+      <>
+        <button data-testid="fundo" style={{ position: "fixed", inset: 0 }}>
+          Fundo
+        </button>
+        <Avisos />
+      </>,
+    );
+    const ids = [
+      toast({ tipo: "erro", titulo: "Falha ao salvar" }),
+      toast({ tipo: "erro", titulo: "Falha ao enviar" }),
+    ];
+    await expect.poll(() => document.querySelectorAll("li[data-tipo]").length).toBe(2);
+    await expect.poll(() => document.querySelector("li[data-tipo]")?.getAttribute("style") ?? "").not.toBe("");
+
+    const [primeiro, segundo] = [...document.querySelectorAll<HTMLElement>("li[data-tipo]")].map((li) =>
+      li.getBoundingClientRect(),
+    );
+    const x = primeiro!.left + primeiro!.width / 2;
+    const vao = (Math.min(primeiro!.bottom, segundo!.bottom) + Math.max(primeiro!.top, segundo!.top)) / 2;
+    // O vão é da caixa da lista (grid com gap): sem o conserto, ele engolia o clique.
+    expect(document.elementFromPoint(x, vao)).toBe(pegar('[data-testid="fundo"]'));
+    // Em cima do aviso, o aviso continua clicável.
+    expect(document.elementFromPoint(x, primeiro!.top + 4)?.closest("li[data-tipo]")).not.toBeNull();
+
+    for (const id of ids) dispensarToast(id);
   });
 });

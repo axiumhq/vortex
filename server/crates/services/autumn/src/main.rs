@@ -10,7 +10,7 @@ use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
     Modify, OpenApi,
 };
-use utoipa_scalar::{Scalar, Servable as ScalarServable};
+use utoipa_scalar::Scalar;
 
 mod api;
 pub mod clamav;
@@ -88,9 +88,9 @@ async fn main() -> Result<(), std::io::Error> {
 
     // Configure Axum and router
     let app = Router::new()
-        .merge(Scalar::with_url("/scalar", ApiDoc::openapi()))
-        .nest("/", api::router().await)
-        .nest("/", ratelimiter::routes())
+        .route("/scalar", scalar_route(Scalar::new(ApiDoc::openapi()).to_html()))
+        .merge(api::router().await)
+        .merge(ratelimiter::routes())
         .layer(from_fn_with_state(
             state.clone(),
             ratelimiter::ratelimit_middleware,
@@ -101,4 +101,10 @@ async fn main() -> Result<(), std::io::Error> {
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 14704));
     let listener = TcpListener::bind(&address).await?;
     axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await
+}
+
+/// Rota que serve a página do Scalar. A integração `axum` do `utoipa-scalar`
+/// 0.1 é presa ao axum 0.7, então o HTML é servido direto.
+fn scalar_route<S: Clone + Send + Sync + 'static>(html: String) -> axum::routing::MethodRouter<S> {
+    axum::routing::get(move || std::future::ready(axum::response::Html(html.clone())))
 }
