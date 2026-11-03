@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 
+import { anexarVideo } from "nucleo/lib/anexarVideo";
+
 import css from "./Palco.module.css";
 
 /**
@@ -15,10 +17,7 @@ export function VideoDaFaixa({ faixa, rotulo }: { faixa: MediaStreamTrack; rotul
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.srcObject = new MediaStream([faixa]);
-    return () => {
-      el.srcObject = null;
-    };
+    return anexarVideo(el, faixa);
   }, [faixa]);
   return <video ref={ref} className={css.video} autoPlay muted playsInline aria-label={rotulo} />;
 }
