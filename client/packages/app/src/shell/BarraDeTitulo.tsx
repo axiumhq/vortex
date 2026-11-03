@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { comum, shell } from "../textos";
 import { Botao } from "../ui/ds";
 import { Marca } from "../ui/Marca";
@@ -10,10 +12,12 @@ export interface BarraDeTituloProps {
   aoMinimizar?: () => void;
   aoMaximizar?: () => void;
   aoFechar?: () => void;
+  /** Avisos do lugar atual (a emergência do servidor), ao lado do de conexão. */
+  avisos?: ReactNode;
 }
 
 /** Só o símbolo (20px) e o nome do app e os botões da janela. Nada mais mora aqui. */
-export function BarraDeTitulo({ aoMinimizar, aoMaximizar, aoFechar }: BarraDeTituloProps) {
+export function BarraDeTitulo({ aoMinimizar, aoMaximizar, aoFechar, avisos }: BarraDeTituloProps) {
   const temJanela = aoMinimizar ?? aoMaximizar ?? aoFechar;
   return (
     <div
@@ -26,7 +30,10 @@ export function BarraDeTitulo({ aoMinimizar, aoMaximizar, aoFechar }: BarraDeTit
         <Marca tamanho={20} />
         {comum.nomeDoApp}
       </span>
-      <AvisoDeConexao />
+      <div className={css.avisos}>
+        {avisos}
+        <AvisoDeConexao />
+      </div>
       {temJanela && (
         <div className={css.janela}>
           {aoMinimizar && (
