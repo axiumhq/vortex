@@ -1,0 +1,99 @@
+/* "Ver votos": uma seção por resposta, com quem votou nela. */
+
+.painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-4);
+}
+
+.respostas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-4);
+}
+
+.resposta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-2);
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  gap: var(--vx-space-2);
+  margin: 0;
+  color: var(--vx-text-1);
+  font-size: var(--vx-type-ui-size);
+  font-weight: var(--vx-type-ui-weight);
+  line-height: var(--vx-type-ui-line);
+}
+
+.marca {
+  flex: none;
+  color: var(--vx-text-2);
+}
+
+.texto {
+  flex: 1;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Mono e tabular, como a porcentagem da linha. */
+.contagem {
+  flex: none;
+  color: var(--vx-text-3);
+  font-family: var(--vx-font-mono);
+  font-size: var(--vx-type-mono-size);
+  font-weight: var(--vx-type-mono-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.votante {
+  display: flex;
+  align-items: center;
+  gap: var(--vx-space-2);
+  padding-inline-start: var(--vx-space-1);
+  color: var(--vx-text-2);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+}
+
+.nome {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ninguem,
+.escondidoTexto {
+  margin: 0;
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-caption-size);
+  line-height: var(--vx-type-caption-line);
+}
+
+.escondido {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-1);
+}
+
+.escondidoTitulo {
+  margin: 0;
+  color: var(--vx-text-1);
+  font-size: var(--vx-type-ui-size);
+  font-weight: var(--vx-type-ui-weight);
+  line-height: var(--vx-type-ui-line);
+}
