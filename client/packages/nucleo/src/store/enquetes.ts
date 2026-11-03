@@ -45,6 +45,13 @@ export type Enquete = {
    * snapshot cacheado não sabe que o tempo andou.
    */
   readonly fechaEm: number | undefined;
+  /**
+   * Quando o autor (ou um moderador) encerrou, em ms — o `ended_at` do
+   * protocolo. `undefined` enquanto aberta ou quando fechou pelo PRAZO; aí o
+   * instante do fim é `fechaEm`. Um número no snapshot e não a data formatada:
+   * formatar é do componente, e só para a enquete que já fechou.
+   */
+  readonly encerradaEm: number | undefined;
   /** Esconde a contagem até fechar — "Resultado só no fim". */
   readonly resultadoNoFim: boolean;
 };
@@ -107,6 +114,7 @@ export function derivarEnquete(b: EnqueteBruta, euId: string | undefined): Enque
     maximo: b.maximo,
     meusVotos: meus,
     fechaEm: b.encerradaEm === undefined ? b.expiraEm : undefined,
+    encerradaEm: b.encerradaEm,
     resultadoNoFim: b.esconder,
   };
 }
@@ -212,6 +220,22 @@ export function proximoVoto(
 /** Já fechou — pelo autor ou pelo relógio. */
 export function estaEncerrada(e: Enquete, agora: number): boolean {
   return e.fechaEm === undefined || e.fechaEm <= agora;
+}
+
+/**
+ * A contagem por resposta está à vista? A MESMA regra decide a porcentagem na
+ * linha e o "Ver votos": "resultado no fim" esconde enquanto a enquete corre e
+ * eu ainda não votei. Quem votou em quê diz o mesmo que a porcentagem, com mais
+ * detalhe — uma regra só impede as duas portas de discordarem.
+ */
+export function resultadoVisivel(e: Enquete, agora: number): boolean {
+  return !e.resultadoNoFim || estaEncerrada(e, agora) || e.meusVotos.length > 0;
+}
+
+/** Quando fechou — pelo autor (`ended_at`) ou pelo prazo. `undefined` se ainda corre. */
+export function instanteDoFim(e: Enquete, agora: number): number | undefined {
+  if (!estaEncerrada(e, agora)) return undefined;
+  return e.encerradaEm ?? e.fechaEm;
 }
 
 /** Estado limpo entre testes. O módulo é global e sobrevive. */
