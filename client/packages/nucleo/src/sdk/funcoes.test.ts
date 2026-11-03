@@ -22,7 +22,7 @@ import {
   definirFuncoesDoArnes,
   servidorTemEnquetes,
   servidorTemFuncao,
-} from "./config";
+} from "./funcoes";
 
 beforeEach(() => {
   estado.client.configuration = undefined;

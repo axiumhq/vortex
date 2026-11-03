@@ -13,7 +13,7 @@
 import { decodeTime, monotonicFactory, ulid } from "ulid";
 
 import { definirEnqueteBruta, lerEuDasEnquetes } from "../store/enquetes";
-import { definirFuncoesDoArnes } from "../sdk/config";
+import { definirFuncoesDoArnes } from "../sdk/funcoes";
 import { registrarFigurinhaLocal } from "../sdk/figurinhasDeMensagem";
 import { FIGURINHAS_DO_ARNES, semearExpressoesDoArnes } from "./expressoesDoArnes";
 import {

@@ -84,7 +84,7 @@ import { assinarFalhaDeVoz, lerFalhaDeVoz, type FalhaDeVoz } from "./falhaDeVoz"
 import { assinarSeletorDeTela, lerSeletorDeTela, type EstadoDoSeletor } from "./seletorDeTela";
 import { chaveDeVideo, faixasDeVideo, type FonteDeVideo } from "./video";
 import { assinarProntidao, lerProntidao } from "./prontidao";
-import { assinarFuncoesDoServidor, servidorTemEnquetes } from "../sdk/config";
+import { assinarFuncoesDoServidor, servidorTemEnquetes } from "../sdk/funcoes";
 import { assinarMinutoAtual, lerMinutoAtual } from "./relogioDeEnquetes";
 import {
   assinarPreferenciasDaSala,
