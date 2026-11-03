@@ -68,6 +68,19 @@ export const ALTURA_DA_CITACAO = 22;
 /** A fileira de reações sob o corpo: chip de 24px mais o respiro. */
 export const ALTURA_DAS_REACOES = 28;
 
+/**
+ * A caixa da enquete sob o corpo: uma parte fixa (respiro, cabeçalho, pergunta
+ * de uma linha, rodapé) e uma por resposta. Medida no navegador, não chutada:
+ * `EnqueteDaMensagem.browser.test.tsx` compara esta conta com a caixa real.
+ * A pergunta longa que quebra em duas linhas erra para menos, como o anexo
+ * erra para menos numa legenda longa.
+ */
+export const ALTURA_DA_ENQUETE = { fixa: 116, porResposta: 52 } as const;
+
+export function alturaDaEnquete(respostas: number): number {
+  return ALTURA_DA_ENQUETE.fixa + ALTURA_DA_ENQUETE.porResposta * respostas;
+}
+
 /** A linha de estado de envio ("Enviando…", "Não foi enviada"). */
 export const ALTURA_DO_ESTADO_DE_ENVIO = 22;
 

@@ -97,6 +97,7 @@ type EventoBruto = {
   poll?: unknown;
   user_id?: string;
   answers?: unknown;
+  ids?: unknown;
 };
 
 /**
@@ -133,6 +134,14 @@ export function anotarEventoDeEnquete(evento: unknown): readonly string[] {
     }
     case "MessageDelete":
       return e.id && removerEnquete(e.id) ? [e.id] : [];
+    case "BulkMessageDelete": {
+      if (!Array.isArray(e.ids)) return [];
+      const ids: string[] = [];
+      for (const id of e.ids) {
+        if (typeof id === "string" && removerEnquete(id)) ids.push(id);
+      }
+      return ids;
+    }
     default:
       return [];
   }

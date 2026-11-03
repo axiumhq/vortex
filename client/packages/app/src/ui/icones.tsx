@@ -61,6 +61,7 @@ import {
   Settings as LSettings,
   Shield as LShield,
   Trash2 as LTrash2,
+  Trophy as LTrophy,
   User as LUser,
   Users as LUsers,
   Video as LVideo,
@@ -138,6 +139,7 @@ export const Olho = envolver(LEye);
 export const OlhoFechado = envolver(LEyeOff);
 export const SemConexao = envolver(LWifiOff);
 export const Coroa = envolver(LCrown);
+export const Trofeu = envolver(LTrophy);
 export const MaisHorizontal = envolver(LEllipsis);
 export const Alca = envolver(LGripVertical);
 export const Canal = envolver(LHash);
