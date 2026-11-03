@@ -1,0 +1,25 @@
+/* Na barra de título (32px): a pílula tem 24 e nunca empurra o conteúdo. */
+.aviso {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--vx-space-2);
+  padding: 0 var(--vx-space-3);
+  block-size: 24px;
+  border-radius: var(--vx-radius-pill);
+  background: var(--vx-warning-soft);
+  color: var(--vx-text-1);
+  font-size: var(--vx-type-caption-size);
+  line-height: var(--vx-type-caption-line);
+  font-variant-numeric: tabular-nums;
+  -webkit-app-region: no-drag;
+}
+
+.aviso svg {
+  color: var(--vx-warning);
+}
+
+.encerrar {
+  block-size: 20px;
+  padding-inline: var(--vx-space-2);
+  font-size: var(--vx-type-caption-size);
+}
