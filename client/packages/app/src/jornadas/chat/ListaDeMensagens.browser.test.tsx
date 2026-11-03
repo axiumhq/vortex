@@ -110,7 +110,7 @@ describe("ListaDeMensagens", () => {
     const altura = el.scrollHeight;
 
     // Só mensagens: cada uma cresce o conteúdo no fim, que é o que reancorava.
-    const parar = startFirehose(60, ids, { message: 1, update: 0, reaction: 0, typing: 0, presence: 0 });
+    const parar = startFirehose(60, ids, { message: 1, update: 0, reaction: 0, typing: 0, presence: 0, pollVote: 0 });
     try {
       await expect.poll(() => el.scrollHeight, { timeout: 5000 }).toBeGreaterThan(altura + 200);
     } finally {
