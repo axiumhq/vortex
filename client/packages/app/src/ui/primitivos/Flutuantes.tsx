@@ -4,6 +4,7 @@ import * as RadixDica from "@radix-ui/react-tooltip";
 import type { ComponentProps, ReactNode } from "react";
 
 import { estilos, juntar, vidro } from "./classes";
+import { useRecipienteDePortal } from "./portal";
 
 // Popover: conteúdo interativo ancorado num gatilho.
 export const Popover = Balao.Root;
@@ -12,8 +13,9 @@ export const GatilhoDoPopover = Balao.Trigger;
 export const AncoraDoPopover = Balao.Anchor;
 
 export function ConteudoDoPopover({ className, ...props }: ComponentProps<typeof Balao.Content>) {
+  const recipiente = useRecipienteDePortal();
   return (
-    <Balao.Portal>
+    <Balao.Portal container={recipiente}>
       <Balao.Content
         sideOffset={8}
         {...props}
@@ -35,10 +37,11 @@ export function Dica({
   children: ReactNode;
   lado?: "top" | "bottom" | "left" | "right";
 }) {
+  const recipiente = useRecipienteDePortal();
   return (
     <RadixDica.Root>
       <RadixDica.Trigger asChild>{children}</RadixDica.Trigger>
-      <RadixDica.Portal>
+      <RadixDica.Portal container={recipiente}>
         <RadixDica.Content
           side={lado}
           sideOffset={6}
@@ -59,8 +62,9 @@ export function ConteudoDoCartao({
   className,
   ...props
 }: ComponentProps<typeof CartaoFlutuante.Content>) {
+  const recipiente = useRecipienteDePortal();
   return (
-    <CartaoFlutuante.Portal>
+    <CartaoFlutuante.Portal container={recipiente}>
       <CartaoFlutuante.Content
         sideOffset={8}
         {...props}

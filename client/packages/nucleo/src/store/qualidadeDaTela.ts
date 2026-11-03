@@ -103,11 +103,12 @@ export function codificacaoDe(q: QualidadeDaTela): {
 }
 
 /**
- * 60 fps pede movimento: o codec segura a fluidez e sacrifica nitidez quando
- * falta banda. Abaixo disso, texto legível importa mais.
+ * 30 fps já pede movimento. O padrão da transmissão é 1080p30, e `detail`
+ * nessa taxa segura texto e entrega poucos quadros. 15 fps continua em
+ * detalhe: aí a nitidez é o que a pessoa escolheu.
  */
 export function pedeMovimento(q: QualidadeDaTela): boolean {
-  return q.taxa >= 60;
+  return q.taxa >= 30;
 }
 
 /**
