@@ -160,6 +160,21 @@ export const chat = {
     emCanal: (canal: string) => `em #${canal}`,
   },
 
+  /* Enquete na linha */
+  enquete: {
+    tipo: (maximo: number) =>
+      maximo > 1 ? "Enquete · múltiplas respostas" : "Enquete · uma resposta",
+    encerrada: "Enquete encerrada",
+    /** Selo em caixa alta, como o resto dos selos do app. */
+    sinalResultado: "Resultado",
+    rodapeEncerrada: (total: number) => `${plural(total, "voto", "votos")} · encerrada`,
+    fechaEmDias: (n: number) => `fecha em ${n} d`,
+    fechaEmHoras: (n: number) => `fecha em ${n} h`,
+    fechaEmMinutos: (n: number) => `fecha em ${n} min`,
+    fechando: "fechando",
+    vencedora: "Mais votada",
+  },
+
   /* Seletor de emoji */
   emoji: {
     maisReacoes: "Mais reações",

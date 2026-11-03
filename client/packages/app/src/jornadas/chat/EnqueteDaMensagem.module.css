@@ -1,0 +1,174 @@
+/*
+  A enquete na linha. As medidas verticais entram em `alturaDaEnquete`
+  (`alturas.ts`): mexer em respiro, linha ou borda aqui pede remedir lá — o
+  teste de navegador compara a estimativa com a caixa medida.
+*/
+
+/* Vidro de leitura SEM backdrop-filter, como o cartão de link: blur por linha
+   numa lista virtualizada custa repintura. */
+.caixa {
+  box-sizing: border-box;
+  inline-size: min(100%, 460px);
+  margin-block-start: var(--vx-space-2);
+  padding: var(--vx-space-4);
+  border: 1px solid var(--vx-border-subtle);
+  border-radius: var(--vx-radius-md);
+  background: var(--vx-surface-glass-reading);
+}
+
+.tipo {
+  display: flex;
+  align-items: center;
+  gap: var(--vx-space-2);
+  margin-block-end: var(--vx-space-2);
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-label-size);
+  font-weight: var(--vx-type-label-weight);
+  line-height: var(--vx-type-label-line);
+  letter-spacing: var(--vx-type-label-tracking);
+  text-transform: uppercase;
+}
+
+.selo {
+  padding-inline: var(--vx-space-1);
+  border-radius: var(--vx-radius-sm);
+  background: var(--vx-success-soft);
+  color: var(--vx-success);
+  font-size: var(--vx-type-badge-size);
+  font-weight: var(--vx-type-badge-weight);
+  line-height: var(--vx-type-label-line);
+  letter-spacing: var(--vx-type-badge-tracking);
+}
+
+.pergunta {
+  margin: 0 0 var(--vx-space-3);
+  color: var(--vx-text-1);
+  font-size: var(--vx-type-heading-size);
+  font-weight: var(--vx-type-heading-weight);
+  line-height: var(--vx-type-heading-line);
+  overflow-wrap: anywhere;
+}
+
+.opcoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-2);
+}
+
+/*
+  A opção é o próprio trilho do resultado. `isolation` cria o contexto para o
+  `::before` ficar atrás do conteúdo e à frente do fundo do botão.
+*/
+.opcao {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: var(--vx-space-2);
+  box-sizing: border-box;
+  inline-size: 100%;
+  margin: 0;
+  padding: var(--vx-space-3);
+  overflow: hidden;
+  border: 1px solid var(--vx-border-subtle);
+  border-radius: var(--vx-radius-sm);
+  background: transparent;
+  color: var(--vx-text-1);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+/*
+  A barra: FUNDO da opção, fora de fluxo, desenhada por `scaleX` da fração.
+  Nunca um elemento no fluxo — votar não pode mudar a altura da linha.
+*/
+.opcao::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--vx-state-hover);
+  transform: scaleX(var(--fracao, 0));
+  transform-origin: left center;
+  transition: transform 200ms ease-out;
+}
+.opcao:dir(rtl)::before {
+  transform-origin: right center;
+}
+
+.opcao:hover:not(:disabled) {
+  background: var(--vx-state-hover);
+}
+
+.opcao[aria-pressed="true"] {
+  border-color: var(--vx-accent);
+}
+.opcao[aria-pressed="true"]::before {
+  background: var(--vx-accent-soft);
+}
+
+.opcao[data-escondido]::before {
+  opacity: 0;
+}
+
+.opcao:disabled {
+  cursor: default;
+}
+
+/* Encerrada: o resultado deixa de ser neutro e a vencedora se destaca. */
+.opcao[data-venceu] {
+  border-color: var(--vx-success);
+}
+.opcao[data-venceu]::before {
+  background: var(--vx-success-soft);
+}
+
+.marca {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--vx-text-2);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+}
+.opcao[data-venceu] .marca {
+  color: var(--vx-success);
+}
+
+.texto {
+  flex: 1;
+  min-inline-size: 0;
+  font-size: var(--vx-type-ui-size);
+  font-weight: var(--vx-type-ui-weight);
+  line-height: var(--vx-type-ui-line);
+  overflow-wrap: anywhere;
+}
+
+/* Mono e tabular: "38%" virando "9%" não desloca o texto ao lado. */
+.pct {
+  flex: none;
+  color: var(--vx-text-2);
+  font-family: var(--vx-font-mono);
+  font-size: var(--vx-type-mono-size);
+  font-weight: var(--vx-type-mono-weight);
+  line-height: var(--vx-type-ui-line);
+  font-variant-numeric: tabular-nums;
+}
+
+.rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vx-space-3);
+  margin-block-start: var(--vx-space-3);
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-caption-size);
+  line-height: var(--vx-type-caption-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opcao::before {
+    transition: none;
+  }
+}

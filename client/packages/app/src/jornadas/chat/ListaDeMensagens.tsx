@@ -29,6 +29,7 @@ import {
   LIMIAR_DE_FIM,
   LIMIAR_DE_LONGE,
   LIMIAR_DE_PAGINACAO,
+  alturaDaEnquete,
   alturaDoTipo,
   amostrarAltura,
   amostrarAlturaDeEmbeds,
@@ -181,6 +182,7 @@ export function ListaDeMensagens({ canalId, servidorId }: ListaDeMensagensProps)
         (m.respostas.length > 0 ? ALTURA_DA_CITACAO : 0) +
         (m.reactions.length > 0 ? ALTURA_DAS_REACOES : 0) +
         (m.sendState !== "sent" ? ALTURA_DO_ESTADO_DE_ENVIO : 0) +
+        (m.enquete ? alturaDaEnquete(m.enquete.opcoes.length) : 0) +
         alturaDeAnexos(m.anexos) +
         (previasLigadas ? alturaDeEmbeds(m.embeds) : 0)
       );
@@ -491,6 +493,7 @@ export function ListaDeMensagens({ canalId, servidorId }: ListaDeMensagensProps)
       m.primeiraNaoLida ||
       m.respostas.length > 0 ||
       m.reactions.length > 0 ||
+      m.enquete !== undefined ||
       m.anexos.length > 0 ||
       (previasLigadas && m.embeds.length > 0) ||
       m.sendState !== "sent";
