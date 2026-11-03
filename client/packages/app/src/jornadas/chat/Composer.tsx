@@ -2,7 +2,7 @@ import { digitacao, enviarMensagem } from "nucleo/sdk/adapter";
 import { temServidorDeMidia, tetoDeUploadBytes, tetoDeUploadTexto } from "nucleo/sdk/anexos";
 import { chaveDeMembro } from "nucleo/sdk/domain";
 import { pode } from "nucleo/sdk/permissoes";
-import { useChannel, useConexao, useMembro, useMessage, usePessoa, useRascunho } from "nucleo/store/hooks";
+import { useChannel, useConexao, useMembro, useMessage, usePessoa, useRascunho, useTemEnquetes } from "nucleo/store/hooks";
 import { limparRascunho, escreverRascunho } from "nucleo/store/rascunhos";
 import { registrarEmojiRecente } from "nucleo/store/emojisRecentes";
 import { cancelarResposta, responderA } from "nucleo/store/resposta";
@@ -14,6 +14,7 @@ import { CampoDeMensagem, PainelVidro } from "../../ui/ds";
 import { Alerta, Arquivo, Arroba, Cadeado, Fechar, Imagem } from "../../ui/icones";
 import { trechoDe } from "./CitacaoDeResposta";
 import css from "./Composer.module.css";
+import { CriarEnquete } from "./CriarEnquete";
 import { SeletorNoComposer } from "./emoji/SeletoresDeEmoji";
 import { useAlvoDeResposta, useFalhadasDoCanal } from "./hooks";
 import { pedirFimDaLista } from "./saltos";
@@ -132,6 +133,9 @@ export function Composer({ canalId, servidorId }: { canalId: string; servidorId:
   const area = useRef<HTMLTextAreaElement | null>(null);
   const seletor = useRef<HTMLInputElement | null>(null);
   const [emojiAberto, setEmojiAberto] = useState(false);
+  const temEnquetes = useTemEnquetes();
+  /** O canal da enquete, lido no clique do botão; `undefined` = diálogo fechado. */
+  const [enqueteEm, setEnqueteEm] = useState<string | undefined>(undefined);
 
   // Armar uma resposta leva o foco ao campo: quem clicou em responder vai escrever.
   const alvoId = alvo?.messageId;
@@ -261,6 +265,7 @@ export function Composer({ canalId, servidorId }: { canalId: string; servidorId:
     ) : undefined;
 
   return (
+    <>
     <SeletorNoComposer
       aberto={emojiAberto}
       aoMudar={setEmojiAberto}
@@ -297,6 +302,14 @@ export function Composer({ canalId, servidorId }: { canalId: string; servidorId:
         onEmoji={() => {
           setEmojiAberto((a) => !a);
         }}
+        onEnquete={
+          // Some (não fica cinza) sem a função no servidor ou sem permissão de enviar.
+          temEnquetes && pode(canalId, "enviar")
+            ? () => {
+                setEnqueteEm(canalId);
+              }
+            : undefined
+        }
         onAnexar={
           podeAnexar
             ? () => {
@@ -325,5 +338,13 @@ export function Composer({ canalId, servidorId }: { canalId: string; servidorId:
       )}
     </div>
     </SeletorNoComposer>
+    {/* Fora do campo: eventos de portal sobem pela árvore React, e colar ou soltar arquivo no diálogo viraria anexo. */}
+    <CriarEnquete
+      canalId={enqueteEm}
+      aoFechar={() => {
+        setEnqueteEm(undefined);
+      }}
+    />
+    </>
   );
 }
