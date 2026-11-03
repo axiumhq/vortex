@@ -84,6 +84,8 @@ import { assinarFalhaDeVoz, lerFalhaDeVoz, type FalhaDeVoz } from "./falhaDeVoz"
 import { assinarSeletorDeTela, lerSeletorDeTela, type EstadoDoSeletor } from "./seletorDeTela";
 import { chaveDeVideo, faixasDeVideo, type FonteDeVideo } from "./video";
 import { assinarProntidao, lerProntidao } from "./prontidao";
+import { assinarFuncoesDoServidor, servidorTemEnquetes } from "../sdk/funcoes";
+import { assinarMinutoAtual, lerMinutoAtual } from "./relogioDeEnquetes";
 import {
   assinarPreferenciasDaSala,
   lerCantoDaSala,
@@ -721,6 +723,16 @@ export function useConexao(): EstadoDaConexao {
 /** O detalhe da conexão (última sincronia). Referência cacheada no store. */
 export function useDetalheDaConexao(): DetalheDaConexao {
   return useSyncExternalStore(assinarConexao, lerDetalheDaConexao);
+}
+
+/** O servidor anuncia enquetes (`features.vortex`)? Reage à configuração chegando. */
+export function useTemEnquetes(): boolean {
+  return useSyncExternalStore(assinarFuncoesDoServidor, servidorTemEnquetes);
+}
+
+/** O minuto atual (ms, arredondado para baixo). Um timer só para todas as linhas. */
+export function useMinutoAtual(): number {
+  return useSyncExternalStore(assinarMinutoAtual, lerMinutoAtual);
 }
 
 /** O `Ready` desta sessão já chegou? Antes dele a interface mostra esqueleto. */

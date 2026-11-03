@@ -4,7 +4,6 @@ use revolt_result::{create_error, Error, Result};
 
 use crate::{Database, User};
 
-#[async_trait::async_trait]
 impl<S> FromRequestParts<S> for User
 where
     Database: FromRef<S>,
