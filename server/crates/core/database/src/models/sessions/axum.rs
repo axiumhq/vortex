@@ -4,7 +4,6 @@ use revolt_result::{create_error, Error, Result};
 
 use crate::{Database, Session};
 
-#[async_trait]
 impl<S> FromRequestParts<S> for Session
 where
     Database: FromRef<S>,
