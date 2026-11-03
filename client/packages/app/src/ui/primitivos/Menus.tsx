@@ -4,6 +4,7 @@ import type { ComponentProps } from "react";
 
 import { Marcar } from "../icones";
 import { classeDoItem, classeDoMenu, classeDoRotulo, classeDoSeparador, estilos, juntar } from "./classes";
+import { useRecipienteDePortal } from "./portal";
 
 /**
  * Menus. Item sem `onSelect`, `disabled` ou `asChild` é erro de lint
@@ -18,8 +19,9 @@ export const MenuSuspenso = Suspenso.Root;
 export const GatilhoDoMenu = Suspenso.Trigger;
 
 export function ConteudoDoMenu({ className, ...props }: ComponentProps<typeof Suspenso.Content>) {
+  const recipiente = useRecipienteDePortal();
   return (
-    <Suspenso.Portal>
+    <Suspenso.Portal container={recipiente}>
       <Suspenso.Content sideOffset={6} {...props} className={juntar(classeDoMenu, className)} />
     </Suspenso.Portal>
   );
@@ -72,8 +74,9 @@ export function ConteudoDoMenuDeContexto({
   className,
   ...props
 }: ComponentProps<typeof Contexto.Content>) {
+  const recipiente = useRecipienteDePortal();
   return (
-    <Contexto.Portal>
+    <Contexto.Portal container={recipiente}>
       <Contexto.Content {...props} className={juntar(classeDoMenu, className)} />
     </Contexto.Portal>
   );

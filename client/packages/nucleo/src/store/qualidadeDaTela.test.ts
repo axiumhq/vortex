@@ -109,9 +109,10 @@ describe("codificação", () => {
     );
   });
 
-  it("só 60 fps pede movimento", () => {
+  it("30 fps já pede movimento; 15 fica em detalhe", () => {
+    expect(pedeMovimento({ resolucao: "1080p", taxa: 30 })).toBe(true);
     expect(pedeMovimento({ resolucao: "720p", taxa: 60 })).toBe(true);
-    expect(pedeMovimento({ resolucao: "1440p", taxa: 30 })).toBe(false);
+    expect(pedeMovimento({ resolucao: "1080p", taxa: 15 })).toBe(false);
   });
 });
 
@@ -172,6 +173,14 @@ describe("o motor abre as duas travas", () => {
   it("publica com a codificação da escolha", () => {
     expect(motor).toContain("screenShareEncoding: codificacaoDe(q)");
     expect(motor).toContain("publicacaoDe(escolha.qualidade)");
+    expect(motor).toContain("simulcast: false");
+    expect(motor).toContain('videoCodec: "vp8"');
+  });
+
+  it("não reaplica constraints no começo, só em Fonte", () => {
+    expect(motor).toContain(
+      "if (ALTURA_DE[escolha.qualidade.resolucao] === undefined)",
+    );
   });
 
   it("trocar ao vivo mexe na captura E no codificador", () => {

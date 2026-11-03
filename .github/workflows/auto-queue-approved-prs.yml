@@ -25,7 +25,7 @@ jobs:
         with:
           client-id: ${{ secrets.CI_APP_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
-          owner: enzolaOps
+          owner: ${{ github.repository_owner }}
           repositories: vortex
 
       - name: Resolve PR and verify approval and the required CI check
@@ -47,7 +47,7 @@ jobs:
               exit 0
             fi
           else
-            PR_URL="$(gh api "repos/enzolaOps/vortex/commits/$HEAD_SHA/pulls" \
+            PR_URL="$(gh api "repos/${{ github.repository }}/commits/$HEAD_SHA/pulls" \
               --jq 'map(select(.state == "open" and .base.ref == "main" and .head.sha == env.HEAD_SHA and .draft == false)) | .[0].html_url // empty')"
             if [ -z "$PR_URL" ]; then
               echo "No open, non-draft PR targeting main matches this workflow run; skipping."
@@ -68,7 +68,7 @@ jobs:
           fi
 
           if [ "$EVENT_NAME" = "workflow_run" ]; then
-            REVIEWS="$(gh api "repos/enzolaOps/vortex/pulls/$PR_NUMBER/reviews")"
+            REVIEWS="$(gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/reviews")"
             if ! jq -e --arg sha "$HEAD_SHA" \
               'map(select(.commit_id == $sha and .state == "APPROVED")) | length > 0' \
               <<< "$REVIEWS" >/dev/null; then
@@ -77,7 +77,7 @@ jobs:
             fi
           fi
 
-          CHECKS="$(gh api "repos/enzolaOps/vortex/commits/$HEAD_SHA/check-runs")"
+          CHECKS="$(gh api "repos/${{ github.repository }}/commits/$HEAD_SHA/check-runs")"
           CI_CHECK="$(jq -c '[.check_runs[] | select(.name == "CI")] | sort_by(.started_at // .created_at) | last // empty' <<< "$CHECKS")"
           if [ -z "$CI_CHECK" ] || [ "$(jq -r '.status' <<< "$CI_CHECK")" != "completed" ]; then
             echo "CI is not complete yet; the workflow_run trigger will retry after it finishes."
