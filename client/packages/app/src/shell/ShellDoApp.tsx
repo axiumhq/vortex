@@ -32,6 +32,8 @@ export interface ShellDoAppProps {
   rodapeDasSalas?: ReactNode;
   /** Muda ao trocar de lugar: faz os limites de erro das regiões esquecerem uma falha. */
   chaveDoLugar?: string;
+  /** Avisos do lugar na barra de título (a emergência do servidor aberto). */
+  avisos?: ReactNode;
 }
 
 /**
@@ -40,7 +42,7 @@ export interface ShellDoAppProps {
  * props. O modo da gaveta é preferência do dispositivo e vive num store, não
  * aqui: sobrevive a fechar e abrir o app.
  */
-export function ShellDoApp({ principal, dock, salas, membros, area, painel, gavetaOculta = false, rodapeDasSalas, faixaDeSalas, salasEmFaixa = false, chaveDoLugar }: ShellDoAppProps) {
+export function ShellDoApp({ principal, dock, salas, membros, area, painel, gavetaOculta = false, rodapeDasSalas, faixaDeSalas, salasEmFaixa = false, chaveDoLugar, avisos }: ShellDoAppProps) {
   const modo = useModoDaGaveta();
   return (
     <Shell
@@ -48,7 +50,7 @@ export function ShellDoApp({ principal, dock, salas, membros, area, painel, gave
       salasEmFaixa={salasEmFaixa}
       faixaDeSalas={faixaDeSalas}
       modoDaGaveta={gavetaOculta ? "oculta" : painel !== undefined ? "busca" : modo}
-      barraDeTitulo={<BarraDeTitulo />}
+      barraDeTitulo={<BarraDeTitulo avisos={avisos} />}
       dock={<DockDeServidores>{dock}</DockDeServidores>}
       salas={salas ?? <ColunaDeSalas rodape={rodapeDasSalas} />}
       principal={area ?? <AreaPrincipal>{principal}</AreaPrincipal>}

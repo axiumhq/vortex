@@ -319,6 +319,16 @@ export const admin = {
   },
 
   /** Segurança: entrada, mensagens privadas e emergência. */
+  /** O aviso na barra de título enquanto o servidor aberto está em emergência. */
+  avisoDeEmergencia: {
+    rotulo: "Aviso de emergência",
+    texto: (ate: string) => `Este servidor está em modo de emergência até ${ate}`,
+    encerrar: "Encerrar",
+    confirmarTitulo: "Encerrar o modo de emergência?",
+    confirmarTexto: "Os convites, o @everyone e a entrada de novas pessoas voltam ao normal agora.",
+    confirmarAcao: "Encerrar emergência",
+  },
+
   segurancaPagina: {
     carregando: "Carregando as regras de segurança…",
     erro: "Não deu para carregar as regras de segurança.",
