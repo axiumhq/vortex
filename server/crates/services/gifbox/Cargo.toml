@@ -30,7 +30,7 @@ axum-extra = { workspace = true, features = ["typed-header"] }
 tower-http = { workspace = true, features = ["cors"] }
 
 # OpenAPI & documentation generation
-utoipa-scalar = { workspace = true, features = ["axum"] }
+utoipa-scalar = { workspace = true }
 utoipa = { workspace = true, features = ["axum_extras", "ulid"] }
 
 # Logging
