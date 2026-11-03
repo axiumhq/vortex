@@ -4,6 +4,16 @@ use rocket::serde::json::Json;
 use serde::Serialize;
 use std::collections::HashMap;
 
+/// Identificadores das funções do Vortex anunciadas em `features.vortex`.
+///
+/// Cada função nova do Vortex que o cliente precise detectar entra nesta
+/// lista (constante + `FUNCOES_VORTEX`), para que ele esconda o que o
+/// servidor não tem.
+pub const FUNCAO_POLLS: &str = "polls";
+
+/// Funções do Vortex que este servidor suporta.
+pub const FUNCOES_VORTEX: &[&str] = &[FUNCAO_POLLS];
+
 /// # hCaptcha Configuration
 #[derive(Serialize, JsonSchema, Debug)]
 pub struct CaptchaFeature {
@@ -59,6 +69,10 @@ pub struct RevoltFeatures {
     pub limits: LimitsConfig,
     /// Legal links
     pub legal_links: LegalLinks,
+    /// Funções exclusivas do Vortex suportadas por este servidor
+    ///
+    /// Clientes upstream ignoram este campo.
+    pub vortex: Vec<String>,
     /// Minimum desktop shell version accepted by this node
     ///
     /// Omitted when the node does not require one.
@@ -273,6 +287,7 @@ pub async fn root() -> Result<Json<RevoltConfig>> {
                 privacy_policy: config.features.legal_links.privacy_policy,
                 guidelines: config.features.legal_links.guidelines,
             },
+            vortex: FUNCOES_VORTEX.iter().map(|f| f.to_string()).collect(),
             desktop_min_version: config.features.desktop_min_version,
         },
         ws: config.hosts.events,
@@ -318,6 +333,17 @@ mod test {
         let corpo: serde_json::Value =
             serde_json::from_str(&response.into_string().await.unwrap()).unwrap();
         assert!(corpo["features"].get("desktop_min_version").is_none());
+    }
+
+    #[rocket::async_test]
+    async fn anuncia_funcoes_do_vortex() {
+        let harness = crate::util::test::TestHarness::new().await;
+        let response = harness.client.get("/").dispatch().await;
+        assert_eq!(response.status(), Status::Ok);
+        let corpo: serde_json::Value =
+            serde_json::from_str(&response.into_string().await.unwrap()).unwrap();
+        let funcoes = corpo["features"]["vortex"].as_array().unwrap();
+        assert!(funcoes.iter().any(|f| f == "polls"));
     }
 
     #[rocket::async_test]
