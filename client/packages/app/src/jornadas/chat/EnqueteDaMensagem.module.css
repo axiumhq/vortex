@@ -167,6 +167,46 @@
   line-height: var(--vx-type-caption-line);
 }
 
+/* Uma linha só, sempre: o rodapé entra na estimativa de altura como uma linha
+   de legenda, e quebrar aqui moveria a âncora. */
+.resumo {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lado {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--vx-space-3);
+  white-space: nowrap;
+}
+
+/* Ação de texto, na métrica da legenda: sem padding nem borda, para não
+   engordar a linha do rodapé ao aparecer. */
+.acao {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--vx-radius-sm);
+  background: none;
+  color: var(--vx-text-2);
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+
+.acao:hover {
+  color: var(--vx-text-1);
+  text-decoration: underline;
+}
+
+.acao:focus-visible {
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .opcao::before {
     transition: none;

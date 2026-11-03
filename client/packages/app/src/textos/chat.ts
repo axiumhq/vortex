@@ -168,6 +168,20 @@ export const chat = {
     /** Selo em caixa alta, como o resto dos selos do app. */
     sinalResultado: "Resultado",
     rodapeEncerrada: (total: number) => `${plural(total, "voto", "votos")} · encerrada`,
+    /** Sufixo com o instante do fim — `ended_at` do protocolo, ou o prazo que venceu. */
+    encerradaQuando: (quando: string) => `em ${quando}`,
+    verVotos: "Ver votos",
+    encerrar: "Encerrar",
+    confirmarEncerrarTitulo: "Encerrar a enquete?",
+    confirmarEncerrarTexto:
+      "Ninguém mais poderá votar, e o resultado fica à vista de todos. Não dá para reabrir.",
+    votos: {
+      titulo: "Quem votou",
+      contagem: (n: number) => plural(n, "voto", "votos"),
+      ninguem: "Ninguém votou nesta resposta",
+      escondidoTitulo: "O resultado sai no fim",
+      escondidoTexto: "Quem votou em quê só aparece depois do seu voto ou quando a enquete fechar.",
+    },
     fechaEmDias: (n: number) => `fecha em ${n} d`,
     fechaEmHoras: (n: number) => `fecha em ${n} h`,
     fechaEmMinutos: (n: number) => `fecha em ${n} min`,

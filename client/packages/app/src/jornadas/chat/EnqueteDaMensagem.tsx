@@ -1,19 +1,24 @@
-import { republicarEnquete } from "nucleo/sdk/adapter";
-import { votarNaEnquete } from "nucleo/sdk/enquetes";
+import { republicarEnquete, usuarioLocalId } from "nucleo/sdk/adapter";
+import { encerrarEnquete, votarNaEnquete } from "nucleo/sdk/enquetes";
+import { pode } from "nucleo/sdk/permissoes";
 import {
   estaEncerrada,
+  instanteDoFim,
   porcentagem,
+  resultadoVisivel,
   rodapeDaEnquete,
   totalDeVotos,
   type Enquete,
   type OpcaoDeEnquete,
 } from "nucleo/store/enquetes";
 import { assinarMinutoAtual, lerMinutoAtual } from "nucleo/store/relogioDeEnquetes";
-import { useSyncExternalStore, type CSSProperties } from "react";
+import { useState, useSyncExternalStore, type CSSProperties } from "react";
 
 import { chat } from "../../textos";
 import { Trofeu } from "../../ui/icones";
+import { Confirmacao } from "../admin/Confirmacao";
 import css from "./EnqueteDaMensagem.module.css";
+import { VotosDaEnquete } from "./VotosDaEnquete";
 
 const t = chat.enquete;
 
@@ -34,6 +39,14 @@ function useMinutoEnquantoAberta(fechaEm: number | undefined): number {
   const aberta = fechaEm !== undefined && fechaEm > visto;
   return useSyncExternalStore(aberta ? assinarMinutoAtual : semAssinar, lerMinutoAtual);
 }
+
+/** Um formatter por sessão: criar `Intl.DateTimeFormat` é caro, e o rodapé o usa por linha. */
+const FIM = new Intl.DateTimeFormat("pt-BR", {
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 /**
  * "fecha em 22 h", a partir do minuto do relógio.
@@ -66,19 +79,31 @@ function prazo(fechaEm: number, agora: number): string {
 export function EnqueteDaMensagem({
   messageId,
   channelId,
+  servidorId,
+  autorId,
   enquete,
 }: {
   messageId: string;
   channelId: string;
+  servidorId: string;
+  autorId: string | undefined;
   enquete: Enquete;
 }) {
+  const [vendoVotos, setVendoVotos] = useState(false);
+  const [encerrando, setEncerrando] = useState(false);
   const agora = useMinutoEnquantoAberta(enquete.fechaEm);
   const encerrada = estaEncerrada(enquete, agora);
   const total = totalDeVotos(enquete);
   const votou = enquete.meusVotos.length > 0;
   /* "Resultado no fim" esconde a porcentagem por resposta enquanto ela pode
-     enviesar: aberta e sem o meu voto. O total aparece sempre. */
-  const escondido = enquete.resultadoNoFim && !encerrada && !votou;
+     enviesar: aberta e sem o meu voto. O total aparece sempre. A mesma regra
+     decide se "Ver votos" existe — e o modal a repete. */
+  const escondido = !resultadoVisivel(enquete, agora);
+  /* Encerrar: o autor, ou quem gerencia mensagens — a mesma regra da rota
+     `poll/end` no servidor. Nunca oferecer o que o servidor vai recusar. */
+  const minha = autorId !== undefined && autorId === usuarioLocalId();
+  const podeEncerrar = !encerrada && (minha || pode(channelId, "encerrarEnquete"));
+  const fim = instanteDoFim(enquete, agora);
   /* Vencedora: a mais votada; empate fica com a primeira, na ordem do autor. */
   const vencedora = encerrada
     ? enquete.opcoes.reduce((a, b) => (b.votos > a.votos ? b : a))
@@ -120,10 +145,70 @@ export function EnqueteDaMensagem({
         ))}
       </div>
 
+      {/* As ações moram no rodapé, que existe sempre e tem altura de UMA linha
+          de legenda: aparecer ou sumir "Ver votos" e "Encerrar" não muda a
+          altura da linha (a lista está ancorada). O teste mede. */}
       <div className={css.rodape}>
-        <span>{encerrada ? t.rodapeEncerrada(total) : rodapeDaEnquete(total, escondido, votou)}</span>
-        {!encerrada && enquete.fechaEm !== undefined && <span>{prazo(enquete.fechaEm, agora)}</span>}
+        <span className={css.resumo} data-rodape-texto>
+          {encerrada
+            ? fim === undefined
+              ? t.rodapeEncerrada(total)
+              : `${t.rodapeEncerrada(total)} ${t.encerradaQuando(FIM.format(fim))}`
+            : rodapeDaEnquete(total, escondido, votou)}
+        </span>
+        <span className={css.lado}>
+          {!encerrada && enquete.fechaEm !== undefined && <span>{prazo(enquete.fechaEm, agora)}</span>}
+          {!escondido && (
+            <button
+              type="button"
+              className={css.acao}
+              onClick={() => {
+                setVendoVotos(true);
+              }}
+            >
+              {t.verVotos}
+            </button>
+          )}
+          {podeEncerrar && (
+            <button
+              type="button"
+              className={css.acao}
+              data-acao="encerrar"
+              onClick={() => {
+                setEncerrando(true);
+              }}
+            >
+              {t.encerrar}
+            </button>
+          )}
+        </span>
       </div>
+
+      {/* Montados só quando abertos: uma janela cheia de enquetes não assina
+          votos de ninguém até alguém pedir para ver. */}
+      {vendoVotos && (
+        <VotosDaEnquete
+          messageId={messageId}
+          servidorId={servidorId}
+          aoFechar={() => {
+            setVendoVotos(false);
+          }}
+        />
+      )}
+      {encerrando && (
+        <Confirmacao
+          aberto
+          aoMudar={setEncerrando}
+          titulo={t.confirmarEncerrarTitulo}
+          texto={t.confirmarEncerrarTexto}
+          confirmar={t.encerrar}
+          aoConfirmar={() =>
+            encerrarEnquete(channelId, messageId, () => {
+              republicarEnquete(messageId);
+            })
+          }
+        />
+      )}
     </div>
   );
 }
