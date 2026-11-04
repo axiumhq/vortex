@@ -168,11 +168,60 @@ export const chat = {
     /** Selo em caixa alta, como o resto dos selos do app. */
     sinalResultado: "Resultado",
     rodapeEncerrada: (total: number) => `${plural(total, "voto", "votos")} · encerrada`,
+    /** Sufixo com o instante do fim — `ended_at` do protocolo, ou o prazo que venceu. */
+    encerradaQuando: (quando: string) => `em ${quando}`,
+    verVotos: "Ver votos",
+    encerrar: "Encerrar",
+    confirmarEncerrarTitulo: "Encerrar a enquete?",
+    confirmarEncerrarTexto:
+      "Ninguém mais poderá votar, e o resultado fica à vista de todos. Não dá para reabrir.",
+    votos: {
+      titulo: "Quem votou",
+      contagem: (n: number) => plural(n, "voto", "votos"),
+      ninguem: "Ninguém votou nesta resposta",
+      escondidoTitulo: "O resultado sai no fim",
+      escondidoTexto: "Quem votou em quê só aparece depois do seu voto ou quando a enquete fechar.",
+    },
     fechaEmDias: (n: number) => `fecha em ${n} d`,
     fechaEmHoras: (n: number) => `fecha em ${n} h`,
     fechaEmMinutos: (n: number) => `fecha em ${n} min`,
     fechando: "fechando",
     vencedora: "Mais votada",
+  },
+
+  /* Criar enquete (botão no campo e diálogo) */
+  criarEnquete: {
+    botao: "Criar enquete",
+    titulo: "Criar enquete",
+    descricao: "Quem estiver no canal vota direto na mensagem.",
+    pergunta: "Pergunta",
+    perguntaDica: "O que você quer perguntar?",
+    respostas: "Respostas",
+    resposta: (n: number) => `Resposta ${n}`,
+    moverResposta: (n: number) => `Mover resposta ${n}`,
+    moverDica: "Arraste ou use Alt e as setas para mudar a ordem",
+    removerResposta: (n: number) => `Remover resposta ${n}`,
+    adicionarResposta: (max: number) => `Adicionar resposta · até ${max}`,
+    restam: (n: number) => (n === 1 ? "1 caractere restante" : `${n} caracteres restantes`),
+    tipo: "Tipo",
+    umaResposta: "Uma resposta",
+    multiplasRespostas: "Múltiplas respostas",
+    duracao: "Duração",
+    duracoes: {
+      oitoHoras: "8 horas",
+      umDia: "1 dia",
+      tresDias: "3 dias",
+      umaSemana: "1 semana",
+    },
+    resultadoNoFim: "Resultado só no fim",
+    resultadoNoFimDica: "A contagem fica escondida até a enquete fechar.",
+    criar: "Criar",
+    erros: {
+      perguntaVazia: "Escreva a pergunta.",
+      perguntaLonga: (max: number) => `A pergunta passa de ${max} caracteres.`,
+      poucasRespostas: "Preencha pelo menos duas respostas.",
+      respostaLonga: (max: number) => `Cada resposta tem até ${max} caracteres.`,
+    },
   },
 
   /* Seletor de emoji */

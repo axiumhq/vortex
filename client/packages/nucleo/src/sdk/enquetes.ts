@@ -285,13 +285,22 @@ export async function votarNaEnquete(
   }
 }
 
-/** Encerra antes do prazo. Só autor ou quem gerencia mensagens — o servidor decide. */
+/**
+ * Encerra antes do prazo. Só autor ou quem gerencia mensagens — o servidor
+ * decide, e a interface só oferece a quem pode (`encerrarEnquete` em
+ * `permissoes.ts`). Devolve se deu certo: a confirmação só fecha quando deu.
+ */
 export async function encerrarEnquete(
   channelId: string,
   messageId: string,
   aoMudar: () => void,
-): Promise<void> {
-  if (!lerEnqueteBruta(messageId)) return;
+): Promise<boolean> {
+  if (!lerEnqueteBruta(messageId)) return false;
+  /* O arnês não tem servidor: encerra só no store, como o voto. */
+  if (ARNES_ATIVO) {
+    if (marcarEncerrada(messageId, Date.now())) aoMudar();
+    return true;
+  }
   try {
     if (!conectado()) throw new Error("sem conexão");
     await client.api.post(
@@ -300,7 +309,9 @@ export async function encerrarEnquete(
     /* O `MessagePollEnd` traz a enquete final; marcar aqui só adianta o
        selo para quem clicou, e o evento substitui por cima. */
     if (marcarEncerrada(messageId, Date.now())) aoMudar();
+    return true;
   } catch {
     toast({ tipo: "erro", titulo: "Não deu para encerrar a enquete." });
+    return false;
   }
 }

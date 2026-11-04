@@ -6,6 +6,7 @@ import {
   ScrollText as LScrollText,
   Bell as LBell,
   BellOff as LBellOff,
+  ChartBar as LChartBar,
   Check as LCheck,
   ChevronDown as LChevronDown,
   ChevronLeft as LChevronLeft,
@@ -122,6 +123,7 @@ export const Arroba = envolver(LAtSign);
 export const Sino = envolver(LBell);
 export const SinoMudo = envolver(LBellOff);
 export const Marcar = envolver(LCheck);
+export const Enquete = envolver(LChartBar);
 export const SetaParaBaixo = envolver(LChevronDown);
 export const SetaParaEsquerda = envolver(LChevronLeft);
 export const SetaParaDireita = envolver(LChevronRight);
