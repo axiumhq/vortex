@@ -33,7 +33,7 @@ env:
 jobs:
   detect:
     name: Detect
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       client: ${{ steps.d.outputs.client }}
       server: ${{ steps.d.outputs.server }}
@@ -67,7 +67,7 @@ jobs:
     name: nucleo
     needs: detect
     if: needs.detect.outputs.client == 'true' && github.event_name != 'push'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     defaults:
       run:
@@ -87,7 +87,7 @@ jobs:
     name: app (typecheck, guards, build)
     needs: detect
     if: needs.detect.outputs.client == 'true' && github.event_name != 'push'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     defaults:
       run:
@@ -108,7 +108,7 @@ jobs:
     name: app (testes)
     needs: detect
     if: needs.detect.outputs.client == 'true' && github.event_name != 'push'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     defaults:
       run:
@@ -127,7 +127,7 @@ jobs:
     name: E2E fumaça
     needs: detect
     if: needs.detect.outputs.client == 'true' && github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     defaults:
       run:
@@ -156,7 +156,7 @@ jobs:
     name: server (testes)
     needs: detect
     if: needs.detect.outputs.server == 'true' && github.event_name != 'push'
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 60
     services:
       redis:
@@ -222,7 +222,7 @@ jobs:
     name: server (clippy)
     needs: detect
     if: needs.detect.outputs.server == 'true' && github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 40
     defaults:
       run:
@@ -250,7 +250,7 @@ jobs:
     name: desktop
     needs: detect
     if: needs.detect.outputs.desktop == 'true' && github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     defaults:
       run:
@@ -282,7 +282,7 @@ jobs:
     name: Aquecer cache (client)
     needs: detect
     if: needs.detect.outputs.client == 'true' && github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -297,7 +297,7 @@ jobs:
     name: Aquecer cache (server ${{ matrix.tarefa }})
     needs: detect
     if: needs.detect.outputs.server == 'true' && github.event_name == 'push'
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 60
     strategy:
       matrix:
@@ -339,7 +339,7 @@ jobs:
     name: CI
     needs: [detect, nucleo, app-estatico, app-testes, e2e, server-testes, server-clippy, desktop]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Gate
         env:

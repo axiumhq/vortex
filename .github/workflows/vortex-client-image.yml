@@ -15,7 +15,7 @@ concurrency:
 jobs:
   detect:
     name: Detect
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: write
     outputs:
@@ -47,7 +47,7 @@ jobs:
     name: Build and push
     needs: detect
     if: needs.detect.outputs.changed == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
       packages: write

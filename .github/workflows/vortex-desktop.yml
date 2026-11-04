@@ -57,7 +57,7 @@ jobs:
           - os: windows-latest
             rotulo: Windows
             plataforma: win32
-          - os: ubuntu-latest
+          - os: blacksmith-4vcpu-ubuntu-2404
             rotulo: Linux
             plataforma: linux
 
