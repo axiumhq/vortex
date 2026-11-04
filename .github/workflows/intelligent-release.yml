@@ -12,7 +12,7 @@ on:
       stabilization_seconds:
         description: Seconds to wait for late queue entries
         type: string
-        default: '900'
+        default: ''
       dry_run:
         description: Analyze without creating a release or tag
         type: boolean
@@ -25,7 +25,7 @@ on:
 
 concurrency:
   group: vortex-intelligent-release
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 permissions:
   contents: read
@@ -35,7 +35,7 @@ jobs:
   release:
     uses: axiumhq/.github/.github/workflows/intelligent-release.yml@main
     with:
-      stabilization_seconds: ${{ inputs.stabilization_seconds || '900' }}
+      stabilization_seconds: ${{ inputs.stabilization_seconds }}
       force: ${{ inputs.force || false }}
       dry_run: ${{ inputs.dry_run || false }}
       direct_impact: ${{ inputs.direct_impact || 'auto' }}
