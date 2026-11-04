@@ -28,9 +28,8 @@ permissions:
 
 jobs:
   release:
-    uses: axiumhq/.github/.github/workflows/intelligent-release.yml@feat/shared-intelligent-release
+    uses: axiumhq/.github/.github/workflows/intelligent-release.yml@main
     with:
-      engine_ref: feat/shared-intelligent-release
       stabilization_seconds: ${{ inputs.stabilization_seconds || '900' }}
       force: ${{ inputs.force || false }}
       dry_run: ${{ inputs.dry_run || false }}
