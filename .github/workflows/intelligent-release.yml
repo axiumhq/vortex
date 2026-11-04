@@ -1,38 +1,28 @@
 name: Intelligent release
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/intelligent-release.yml"
-      - ".jev/presets/release-impact.json"
-      - "scripts/ci/intelligent-release.sh"
-      - "scripts/ci/split-release-diff.py"
-      - "scripts/ci/prepare-release-diff.py"
-      - "scripts/ci/test_prepare_release_diff.py"
-      - "scripts/ci/test_split_release_diff.py"
-      - "scripts/ci/release-notes.sh"
   push:
     branches: [main]
   workflow_dispatch:
     inputs:
       force:
-        description: "Reanalyze an already processed main commit (manual review/retry)"
-        required: false
-        default: false
+        description: Reanalyze an already processed commit
         type: boolean
+        default: false
       stabilization_seconds:
-        description: "Seconds to wait for late merge-queue entries (use 0 for immediate testing)"
-        required: false
-        default: 900
-        type: number
+        description: Seconds to wait for late queue entries
+        type: string
+        default: '900'
       dry_run:
-        description: "Test the selected branch without creating tags or publishing a release"
-        required: false
-        default: false
+        description: Analyze without creating a release or tag
         type: boolean
+        default: false
+      direct_impact:
+        description: Optional override for an ambiguous batch of direct commits
+        type: choice
+        options: [auto, major, minor, patch, none]
+        default: auto
 
-# Never run two release decisions concurrently. A later main push stays queued
-# while an earlier decision finishes or safely aborts.
 concurrency:
   group: vortex-intelligent-release
   cancel-in-progress: false
@@ -42,70 +32,14 @@ permissions:
   pull-requests: read
 
 jobs:
-  validate:
-    if: github.event_name == 'pull_request'
-    name: Validate release automation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Check shell syntax
-        run: bash -n scripts/ci/intelligent-release.sh
-      - name: Check existing release-notes script syntax
-        run: sh -n scripts/ci/release-notes.sh
-      - name: Test release diff pre-analysis and chunking
-        run: python3 -m unittest scripts/ci/test_prepare_release_diff.py scripts/ci/test_split_release_diff.py
-      - name: Validate Jev preset JSON
-        run: jq empty .jev/presets/release-impact.json
-      - name: Check whitespace errors
-        run: |
-          git fetch origin main:refs/remotes/origin/main
-          git diff --check origin/main...HEAD
-
   release:
-    if: github.event_name != 'pull_request'
-    name: Release when the merge queue is drained
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Checkout full history and tags
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          # For a manual dry run, execute the workflow/script from the selected branch.
-          # All normal release runs continue to execute the main branch.
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && github.ref || 'main' }}
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Install Jev CLI
-        env:
-          JEV_VERSION: v2026.919.0
-          JEV_INSTALL_DIR: ${{ runner.temp }}/jev-bin
-        run: |
-          set -euo pipefail
-          curl -fsSL https://raw.githubusercontent.com/model-clis/jev/v2026.919.0/scripts/install.sh | sh
-          echo "$JEV_INSTALL_DIR" >> "$GITHUB_PATH"
-          "$JEV_INSTALL_DIR/jev" --version
-
-      - name: Create GitHub App token
-        id: app
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        with:
-          client-id: ${{ secrets.CI_APP_ID }}
-          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: vortex
-
-      - name: Wait for the queue to settle, classify changes, and publish
-        env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
-          JEV_API_KEY: ${{ secrets.JEV_API_KEY }}
-          REPOSITORY: ${{ github.repository }}
-          REPOSITORY_OWNER: ${{ github.repository_owner }}
-          GITHUB_SHA_AT_START: ${{ github.sha }}
-          FORCE_REANALYZE: ${{ inputs.force }}
-          STABILIZATION_SECONDS: ${{ inputs.stabilization_seconds }}
-          DRY_RUN: ${{ inputs.dry_run }}
-        run: bash scripts/ci/intelligent-release.sh
+    uses: axiumhq/.github/.github/workflows/intelligent-release.yml@main
+    with:
+      stabilization_seconds: ${{ inputs.stabilization_seconds || '900' }}
+      force: ${{ inputs.force || false }}
+      dry_run: ${{ inputs.dry_run || false }}
+      direct_impact: ${{ inputs.direct_impact || 'auto' }}
+    secrets:
+      CI_APP_ID: ${{ secrets.CI_APP_ID }}
+      CI_APP_PRIVATE_KEY: ${{ secrets.CI_APP_PRIVATE_KEY }}
+      JEV_API_KEY: ${{ secrets.JEV_API_KEY }}
