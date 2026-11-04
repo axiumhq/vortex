@@ -45,7 +45,7 @@ env:
 jobs:
   detect:
     name: Detect
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: write
     outputs:
@@ -85,7 +85,7 @@ jobs:
     name: Base (${{ matrix.arch }})
     needs: detect
     if: needs.detect.outputs.changed == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 120
     permissions:
       contents: read
@@ -198,7 +198,7 @@ jobs:
   # única imagem runtime. O compose define o comando de cada serviço.
   publicar:
     name: Manifest and runtime
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: [detect, base]
     if: needs.detect.outputs.changed == 'true'
     timeout-minutes: 40
