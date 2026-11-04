@@ -20,8 +20,8 @@ on:
       direct_impact:
         description: Optional override for an ambiguous batch of direct commits
         type: choice
-        options: ['', major, minor, patch, none]
-        default: ''
+        options: [auto, major, minor, patch, none]
+        default: auto
 
 concurrency:
   group: vortex-intelligent-release
@@ -38,7 +38,7 @@ jobs:
       stabilization_seconds: ${{ inputs.stabilization_seconds || '900' }}
       force: ${{ inputs.force || false }}
       dry_run: ${{ inputs.dry_run || false }}
-      direct_impact: ${{ inputs.direct_impact || '' }}
+      direct_impact: ${{ inputs.direct_impact || 'auto' }}
     secrets:
       CI_APP_ID: ${{ secrets.CI_APP_ID }}
       CI_APP_PRIVATE_KEY: ${{ secrets.CI_APP_PRIVATE_KEY }}
