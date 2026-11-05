@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-5EE6D0?style=flat-square" /></a>
+  <a href="https://github.com/axiumhq/vortex/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/axiumhq/vortex/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
   <a href="https://github.com/axiumhq/vortex/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/axiumhq/vortex?style=flat-square&color=A99BFF" /></a>
   <a href="https://github.com/stoatchat"><img alt="Protocol" src="https://img.shields.io/badge/protocol-Stoat-F2F4FA?style=flat-square&labelColor=0A0C14" /></a>
   <img alt="Platforms" src="https://img.shields.io/badge/web%20%2B%20desktop-Electron-0A0C14?style=flat-square" />
@@ -33,14 +34,14 @@ Vortex is a chat client and server you run yourself. It speaks the [Stoat](https
 
 The web app and the Electron shell share one interface. The shell does not bundle the client: it loads your instance over HTTPS.
 
-## What you get
+## Features
 
 - Servers, channels, and direct messages
 - Voice rooms, with screen share
 - A desktop installer, updated from GitHub Releases
 - Your own API and event server (`delta` and `bonfire`)
 
-## Layout
+## Repository layout
 
 | | |
 | --- | --- |
@@ -52,7 +53,7 @@ The web app and the Electron shell share one interface. The shell does not bundl
 
 `client/`, `server/`, and `desktop/` each have their own toolchain. Run commands from inside the directory. `vendor/` is not a product build. A check in CI fails if a workflow starts packaging it.
 
-## Develop
+## Run locally
 
 ```bash
 cd client
