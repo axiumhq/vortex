@@ -10,13 +10,13 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-5EE6D0?style=flat-square" /></a>
-  <a href="https://github.com/enzolaOps/vortex/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/enzolaOps/vortex?style=flat-square&color=A99BFF" /></a>
+  <a href="https://github.com/axiumhq/vortex/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/axiumhq/vortex?style=flat-square&color=A99BFF" /></a>
   <a href="https://github.com/stoatchat"><img alt="Protocol" src="https://img.shields.io/badge/protocol-Stoat-F2F4FA?style=flat-square&labelColor=0A0C14" /></a>
   <img alt="Platforms" src="https://img.shields.io/badge/web%20%2B%20desktop-Electron-0A0C14?style=flat-square" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/enzolaOps/vortex/releases/latest">Download</a>
+  <a href="https://github.com/axiumhq/vortex/releases/latest">Download</a>
   ·
   <a href="VORTEX.md">Fork notes</a>
   ·
