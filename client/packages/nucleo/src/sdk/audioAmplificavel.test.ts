@@ -1,9 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { criarAudioAmplificavel, type FaixaAmplificavel } from "./audioAmplificavel";
+import {
+  criarAudioAmplificavel,
+  elementoControlaVolume,
+  type FaixaAmplificavel,
+} from "./audioAmplificavel";
 
 /** Dublê de `RemoteAudioTrack`: registra a ordem e o que foi aplicado. */
-function faixa() {
+/** `reciclado`: o elemento que o LiveKit devolve de outra faixa no `attach`. */
+function faixa(reciclado?: HTMLMediaElement) {
   const ordem: string[] = [];
   const f = {
     attachedElements: [] as HTMLMediaElement[],
@@ -12,7 +17,7 @@ function faixa() {
     ordem,
     attach() {
       ordem.push("attach");
-      const el = document.createElement("audio");
+      const el = reciclado ?? document.createElement("audio");
       /* Como o LiveKit: com contexto, o elemento nasce mudo e o som sai do GainNode. */
       if (f.contexto) el.muted = true;
       f.attachedElements.push(el);
@@ -55,12 +60,18 @@ function startAudio(el: HTMLMediaElement) {
   el.dispatchEvent(new Evento("volumechange"));
 }
 
-function montar(ganhos: Record<string, number>, criar: () => AudioContext | undefined = contexto) {
+function montar(
+  ganhos: Record<string, number>,
+  criar: () => AudioContext | undefined = contexto,
+  /* `false` é o iOS, onde `element.volume` é só leitura. */
+  volumeDoElemento = true,
+) {
   const destino = document.createElement("div");
   const criarContexto = vi.fn(criar);
   const amp = criarAudioAmplificavel({
     criarContexto,
     destino: () => destino,
+    elementoControlaVolume: () => volumeDoElemento,
   });
   /* O motor calcula o ganho de cada um; aqui ele sai do mapa do teste. */
   const som = {
@@ -254,6 +265,79 @@ describe("áudio amplificável (voz e som da tela)", () => {
       som.receber("ana", f);
       expect(f.ordem).toEqual(["contexto", "attach"]);
       expect(f.volume).toBe(3);
+    });
+  });
+
+  describe("no iOS (sem setSinkId no contexto e com element.volume só leitura)", () => {
+    it("fica no contexto mesmo abaixo de 100% e a 0 — ensurdecer continua calando", () => {
+      const ganhos = { ana: 0.5 };
+      const { som } = montar(ganhos, contextoSemSaida, false);
+      const f = faixa();
+      som.receber("ana", f);
+      const el = f.attachedElements[0]!;
+      expect(f.contexto).toBeDefined();
+      expect(f.volume).toBe(0.5);
+      ganhos.ana = 0;
+      som.aplicar("ana", f);
+      expect(f.contexto).toBeDefined();
+      expect(f.volume).toBe(0);
+      startAudio(el);
+      expect(el.muted).toBe(true);
+    });
+
+    it("detecta o iOS e o iPad que se diz Mac; volume que não muda também conta", () => {
+      const ua = (userAgent: string, platform = "", maxTouchPoints = 0) => ({ userAgent, platform, maxTouchPoints });
+      expect(elementoControlaVolume(undefined, ua("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)"))).toBe(false);
+      expect(elementoControlaVolume(undefined, ua("Mozilla/5.0 (Macintosh)", "MacIntel", 5))).toBe(false);
+      expect(elementoControlaVolume(undefined, ua("Mozilla/5.0 (Macintosh)", "MacIntel", 0))).toBe(true);
+      expect(elementoControlaVolume(document, ua("Mozilla/5.0 (X11; Linux) Firefox/130"))).toBe(true);
+      /* O iOS real: o atributo existe e ignora a escrita. */
+      const soLeitura = {
+        createElement: () => ({
+          get volume() {
+            return 1;
+          },
+          set volume(_v: number) {},
+        }),
+      } as unknown as Document;
+      expect(elementoControlaVolume(soLeitura, ua("Mozilla/5.0 (Macintosh)", "MacIntel", 0))).toBe(false);
+    });
+  });
+
+  describe("elemento reciclado pelo LiveKit", () => {
+    it("de uma faixa no contexto para uma no elemento: o guarda não cala a nova", () => {
+      const ganhos = { ana: 2, bia: 0.5 };
+      const { som } = montar(ganhos, contextoSemSaida);
+      const a = faixa();
+      som.receber("ana", a);
+      const el = a.attachedElements[0]!;
+      expect(el.muted).toBe(true);
+      a.attachedElements.length = 0;
+
+      const b = faixa(el);
+      som.receber("bia", b);
+      expect(b.contexto).toBeUndefined();
+      expect(el.muted).toBe(false);
+      startAudio(el);
+      expect(el.muted).toBe(false);
+      expect(b.volume).toBe(0.5);
+    });
+
+    it("de uma faixa no elemento para uma no contexto: o guarda passa a valer", () => {
+      const ganhos = { ana: 0.5, bia: 2 };
+      const { som } = montar(ganhos, contextoSemSaida);
+      const a = faixa();
+      som.receber("ana", a);
+      const el = a.attachedElements[0]!;
+      expect(el.muted).toBe(false);
+      a.attachedElements.length = 0;
+
+      const b = faixa(el);
+      som.receber("bia", b);
+      expect(b.contexto).toBeDefined();
+      startAudio(el);
+      expect(el.muted).toBe(true);
+      expect(b.volume).toBe(2);
     });
   });
 });

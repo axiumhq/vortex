@@ -31,6 +31,12 @@
  * vai para o contexto — e aí o dispositivo padrão é o preço aceito do ganho.
  * Onde o contexto troca de saída, toda faixa fica nele e nada alterna.
  *
+ * ⚠ **No iOS o elemento não serve, e a faixa fica SEMPRE no contexto.** O
+ * Safari do iOS também não tem `AudioContext.setSinkId`, mas lá
+ * `element.volume` é só leitura: o caminho do elemento faria ensurdecer (ganho
+ * 0) e todo volume abaixo de 100% pararem de atenuar. Ver
+ * `elementoControlaVolume`.
+ *
  * ⚠ **No contexto, o elemento tem de CONTINUAR mudo.** `Room.startAudio()`
  * desmuta todo `<audio>` remoto quando a sala não usa `webAudioMix` — e ele
  * roda quando o microfone local é adquirido e quando a página volta a ficar
@@ -60,6 +66,44 @@ export interface OpcoesDoAudioAmplificavel {
   criarContexto: () => AudioContext | undefined;
   /** Onde os `<audio>` moram (fora da árvore React). */
   destino: () => HTMLElement;
+  /**
+   * Se `HTMLMediaElement.volume` atenua de fato nesta plataforma. Padrão:
+   * `elementoControlaVolume()`. Falso no iOS.
+   */
+  elementoControlaVolume?: () => boolean;
+}
+
+interface Plataforma {
+  readonly userAgent: string;
+  readonly platform: string;
+  readonly maxTouchPoints: number;
+}
+
+/**
+ * `element.volume` funciona aqui? Por capacidade primeiro: escrever num
+ * elemento de teste e reler — no iOS o atributo é só leitura e continua em 1.
+ * A detecção do iOS/iPadOS (inclusive o iPad que se apresenta como Mac com
+ * toque) fica de reserva para quando não há documento onde testar.
+ */
+export function elementoControlaVolume(
+  doc: Document | undefined = typeof document === "undefined" ? undefined : document,
+  plataforma: Plataforma | undefined = typeof navigator === "undefined" ? undefined : navigator,
+): boolean {
+  if (plataforma && ehIos(plataforma)) return false;
+  if (!doc) return true;
+  try {
+    const teste = doc.createElement("audio");
+    teste.volume = 0.5;
+    return Math.abs(teste.volume - 0.5) < 0.01;
+  } catch {
+    return false;
+  }
+}
+
+function ehIos(p: Plataforma): boolean {
+  if (/iPad|iPhone|iPod/.test(p.userAgent)) return true;
+  /* iPadOS 13+ diz ser um Mac; o toque é o que o entrega. */
+  return p.platform === "MacIntel" && p.maxTouchPoints > 1;
 }
 
 /** O ganho que se consegue aplicar com Web Audio: 300%. */
@@ -86,8 +130,15 @@ export function criarAudioAmplificavel(opcoes: OpcoesDoAudioAmplificavel): Audio
   let saida: string | undefined;
   /* Faixas tocando pelo contexto AGORA. Fraco: a faixa morre com a assinatura. */
   let comContexto = new WeakSet<FaixaAmplificavel>();
-  /* Elementos que já têm o guarda de mudo — um ouvinte por elemento. */
-  const guardados = new WeakSet<HTMLMediaElement>();
+  /*
+    O DONO atual de cada elemento, lido pelo guarda de mudo a cada evento. O
+    LiveKit RECICLA elementos desanexados: um ouvinte que capturasse a primeira
+    faixa remutaria a faixa seguinte que toca pelo elemento, ou deixaria de
+    remutar a que toca pelo contexto.
+  */
+  const dono = new WeakMap<HTMLMediaElement, FaixaAmplificavel>();
+  const controlaVolume = opcoes.elementoControlaVolume ?? (() => elementoControlaVolume());
+  let elementoServe: boolean | undefined;
 
   function obterContexto(): ContextoComSaida | undefined {
     if (!contexto) {
@@ -114,18 +165,27 @@ export function criarAudioAmplificavel(opcoes: OpcoesDoAudioAmplificavel): Audio
     const c = obterContexto();
     if (!c) return undefined;
     /* Contexto que não troca de saída só compensa onde o elemento não alcança. */
-    if (typeof c.setSinkId !== "function" && ganho <= 1) return undefined;
+    if (typeof c.setSinkId !== "function" && ganho <= 1) {
+      elementoServe ??= controlaVolume();
+      if (elementoServe) return undefined;
+    }
     return c;
   }
 
   function guardarMudo(faixa: FaixaAmplificavel): void {
     for (const el of faixa.attachedElements) {
-      if (comContexto.has(faixa)) el.muted = true;
-      if (guardados.has(el)) continue;
-      guardados.add(el);
+      /* O dono muda ANTES do mudo: o `volumechange` que a escrita dispara já
+         tem de ver a faixa nova. */
+      const novo = !dono.has(el);
+      dono.set(el, faixa);
+      /* Pelo elemento, ele É a saída — inclusive o reciclado de uma faixa que
+         tocava pelo contexto e o deixou mudo. */
+      el.muted = comContexto.has(faixa);
+      if (!novo) continue;
       el.addEventListener("volumechange", () => {
-        /* Desmutado por fora (`startAudio`) enquanto toca pelo contexto. */
-        if (comContexto.has(faixa) && !el.muted) el.muted = true;
+        /* Desmutado por fora (`startAudio`) enquanto o dono toca pelo contexto. */
+        const atual = dono.get(el);
+        if (atual && comContexto.has(atual) && !el.muted) el.muted = true;
       });
     }
   }
