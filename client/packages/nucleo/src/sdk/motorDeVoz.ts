@@ -115,7 +115,7 @@ import {
   assinarQualquerVolumeDaTransmissao,
   volumeEfetivoDaTransmissao,
 } from "../store/volumesDeTransmissao";
-import { criarAudioDaTransmissao } from "./audioDaTransmissao";
+import { criarAudioAmplificavel } from "./audioAmplificavel";
 import { criarAssinaturaDeVideo } from "./assinaturaDeVideo";
 import { pararTodos } from "./efeitosSonoros";
 import {
@@ -418,7 +418,7 @@ function ligarEventos(r: Room, channelId: string): void {
        de volume ficaria preso a uma sala morta (erro nº 5 do briefing). */
     pararDeOuvirVolumes?.();
     pararDeOuvirVolumes = undefined;
-    somDaTela.fechar();
+    audioAmplificavel.fechar();
     atenuador.atualizar(false, false, true);
     pararAudioDaJanela();
     faixasDeVideo.limpar();
@@ -638,16 +638,23 @@ function ligarEventos(r: Room, channelId: string): void {
         por aqui que ela recebe o contexto e o volume guardado de novo.
       */
       if (pub.source === Track.Source.ScreenShareAudio) {
-        somDaTela.receber(participante.identity, faixa as RemoteAudioTrack);
+        audioAmplificavel.receber(
+          faixa as RemoteAudioTrack,
+          volumeEfetivoDaTransmissao(participante.identity),
+        );
         return;
       }
-      elementoDeAudio().appendChild(faixa.attach());
       /*
-        O volume guardado desta pessoa chega AQUI, na faixa recém-assinada.
-        Antes dela não há onde aplicar, e aplicar só quando o deslizante mexe
-        faria quem você baixou ontem voltar a 100% em toda chamada nova.
+        A voz passa pelo MESMO contexto, para o volume por pessoa chegar a
+        300%. O volume guardado desta pessoa chega AQUI, na faixa
+        recém-assinada: antes dela não há onde aplicar, e aplicar só quando o
+        deslizante mexe faria quem você baixou ontem voltar a 100% em toda
+        chamada nova.
       */
-      definirVolumeDe(participante.identity);
+      audioAmplificavel.receber(
+        faixa as RemoteAudioTrack,
+        volumeEfetivo(participante.identity),
+      );
       return;
     }
 
@@ -843,7 +850,7 @@ function mesmaLista(a: readonly string[], b: readonly string[]): boolean {
 function audioDaTelaJaPresente(userId: string): void {
   const faixa = publicacaoDeAudioDaTela(userId, "tela")?.track;
   if (!faixa || faixa.kind !== Track.Kind.Audio) return;
-  somDaTela.receber(userId, faixa as RemoteAudioTrack);
+  audioAmplificavel.receber(faixa as RemoteAudioTrack, volumeEfetivoDaTransmissao(userId));
 }
 
 const assinatura = criarAssinaturaDeVideo({
@@ -952,33 +959,59 @@ function ehVideoRemoto(t: RemoteTrack): t is RemoteVideoTrack {
  */
 function definirVolumeDe(userId: string): void {
   /*
-    ⚠ **A voz fica limitada a 1, e acima disso LANÇAVA.** Sem `webAudioMix` o
-    LiveKit escreve em `HTMLMediaElement.volume`, que dá `IndexSizeError` fora
-    de [0, 1]. Ver `VOLUME_MAXIMO` em `store/volumesDeVoz.ts`.
+    ⚠ **Nenhum dos dois passa por `participante.setVolume`**: aquele guarda o
+    valor num mapa e o reaplica em toda faixa nova ANTES de ela ter contexto —
+    um 3 ali lançaria no `attach`. A voz vai até 300% pelo volume da pessoa; o
+    som da tela, até 300% pelo da transmissão. Sem Web Audio, os dois param em
+    100% (ver `sdk/audioAmplificavel.ts`).
   */
-  const ganho = Math.min(1, Math.max(0, volumeEfetivo(userId)));
-  participanteRemoto(userId)?.setVolume(ganho, Track.Source.Microphone);
-  /*
-    O som da tela NÃO passa por `participante.setVolume`: aquele guarda o valor
-    num mapa e o reaplica em toda faixa nova ANTES de ela ter contexto — um 3
-    ali lançaria no `attach`. O ganho dela é o da transmissão, até 300%.
-  */
+  const voz = participanteRemoto(userId)?.getTrackPublication(
+    Track.Source.Microphone,
+  )?.track;
+  if (voz && voz.kind === Track.Kind.Audio) {
+    audioAmplificavel.aplicar(voz as RemoteAudioTrack, volumeEfetivo(userId));
+  }
   const tela = publicacaoDeAudioDaTela(userId, "tela")?.track;
   if (tela && tela.kind === Track.Kind.Audio) {
-    somDaTela.aplicar(userId, tela as RemoteAudioTrack);
+    audioAmplificavel.aplicar(
+      tela as RemoteAudioTrack,
+      volumeEfetivoDaTransmissao(userId),
+    );
   }
 }
 
 /**
- * O som das telas que você assiste — ver `sdk/audioDaTransmissao.ts`. Um
- * contexto por sala, criado na primeira faixa e fechado na saída.
+ * A voz de cada pessoa e o som das telas que você assiste — ver
+ * `sdk/audioAmplificavel.ts`. Um contexto por sala, criado na primeira faixa e
+ * fechado na saída; um `GainNode` por faixa.
  */
-const somDaTela = criarAudioDaTransmissao({
-  criarContexto: () =>
-    typeof AudioContext === "undefined" ? undefined : new AudioContext(),
+const audioAmplificavel = criarAudioAmplificavel({
+  criarContexto: criarContextoDeSaida,
   destino: elementoDeAudio,
-  ganho: volumeEfetivoDaTransmissao,
 });
+
+/**
+ * ⚠ **Com a voz no contexto, contexto suspenso é sala MUDA.** Ele nasce na
+ * primeira faixa, que chega depois do clique em "entrar" — o navegador aceita
+ * pela ativação que a página já teve. Entrar sem gesto nenhum (moderação te
+ * moveu, a aba voltou para a chamada sozinha) pode deixá-lo suspenso; o
+ * LiveKit tenta `resume()` uma vez, e aqui o próximo toque ou tecla tenta de
+ * novo, em vez de a pessoa ouvir silêncio até sair e entrar.
+ */
+function criarContextoDeSaida(): AudioContext | undefined {
+  if (typeof AudioContext === "undefined") return undefined;
+  const contexto = new AudioContext();
+  if (contexto.state === "suspended" && typeof document !== "undefined") {
+    const retomar = () => {
+      document.removeEventListener("pointerdown", retomar, true);
+      document.removeEventListener("keydown", retomar, true);
+      if (contexto.state === "suspended") void contexto.resume().catch(() => {});
+    };
+    document.addEventListener("pointerdown", retomar, true);
+    document.addEventListener("keydown", retomar, true);
+  }
+  return contexto;
+}
 
 const publicacoes = publicacoesDaSala(() => sala);
 
@@ -1232,7 +1265,7 @@ async function desmontarSala(esperarAviso: boolean): Promise<void> {
   esquecerProcessadores();
   pararDeOuvirVolumes?.();
   pararDeOuvirVolumes = undefined;
-  somDaTela.fechar();
+  audioAmplificavel.fechar();
   desligarAssinaturaDeVideo?.();
   desligarAssinaturaDeVideo = undefined;
   /* Pedidos e novas tentativas morrem com a sala, como no `Disconnected` —
@@ -1517,8 +1550,8 @@ function revisarAtenuacao(): void {
 
 async function aplicarSaida(r: Room): Promise<void> {
   const { saidaId } = lerPreferenciasDeVoz();
-  /* O som da tela toca pelo contexto próprio, que a sala não conhece. */
-  await somDaTela.trocarSaida(saidaId);
+  /* A voz e o som da tela tocam pelo contexto próprio, que a sala não conhece. */
+  await audioAmplificavel.trocarSaida(saidaId);
   if (saidaId === undefined) return;
   try {
     await r.switchActiveDevice("audiooutput", saidaId);

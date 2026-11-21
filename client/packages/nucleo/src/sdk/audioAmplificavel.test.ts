@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { criarAudioDaTransmissao, type FaixaDeSomDaTela } from "./audioDaTransmissao";
+import { criarAudioAmplificavel, type FaixaAmplificavel } from "./audioAmplificavel";
 
 /** Dublê de `RemoteAudioTrack`: registra a ordem e o que foi aplicado. */
 function faixa() {
@@ -26,7 +26,7 @@ function faixa() {
       f.volume = v;
     },
   };
-  return f satisfies FaixaDeSomDaTela;
+  return f satisfies FaixaAmplificavel;
 }
 
 function espiao() {
@@ -43,15 +43,27 @@ function contexto(): AudioContext {
 function montar(ganhos: Record<string, number>, criar: () => AudioContext | undefined = contexto) {
   const destino = document.createElement("div");
   const criarContexto = vi.fn(criar);
-  const som = criarAudioDaTransmissao({
+  const amp = criarAudioAmplificavel({
     criarContexto,
     destino: () => destino,
-    ganho: (id) => ganhos[id] ?? 1,
   });
+  /* O motor calcula o ganho de cada um; aqui ele sai do mapa do teste. */
+  const som = {
+    receber: (id: string, f: FaixaAmplificavel) => {
+      amp.receber(f, ganhos[id] ?? 1);
+    },
+    aplicar: (id: string, f: FaixaAmplificavel) => {
+      amp.aplicar(f, ganhos[id] ?? 1);
+    },
+    trocarSaida: (id: string | undefined) => amp.trocarSaida(id),
+    fechar: () => {
+      amp.fechar();
+    },
+  };
   return { som, destino, criarContexto };
 }
 
-describe("som da transmissão", () => {
+describe("áudio amplificável (voz e som da tela)", () => {
   it("dá o contexto ANTES de anexar e aplica ganho acima de 100%", () => {
     const { som, destino } = montar({ ana: 3 });
     const f = faixa();
@@ -118,5 +130,29 @@ describe("som da transmissão", () => {
     expect(setSinkId).toHaveBeenLastCalledWith("");
     som.fechar();
     expect(close).toHaveBeenCalled();
+  });
+
+  it("voz e som da tela da mesma pessoa dividem UM contexto, não um por faixa", () => {
+    const { som, destino, criarContexto } = montar({});
+    const voz = faixa();
+    const tela = faixa();
+    som.receber("x", voz);
+    som.receber("x", tela);
+    expect(criarContexto).toHaveBeenCalledTimes(1);
+    expect(voz.contexto).toBe(tela.contexto);
+    expect(destino.children).toHaveLength(2);
+  });
+
+  it("prende o ganho entre 0 e 3", () => {
+    const { som } = montar({ alto: 7, negativo: -2, nan: Number.NaN });
+    const a = faixa();
+    const b = faixa();
+    const c = faixa();
+    som.receber("alto", a);
+    som.receber("negativo", b);
+    som.receber("nan", c);
+    expect(a.volume).toBe(3);
+    expect(b.volume).toBe(0);
+    expect(c.volume).toBe(1);
   });
 });
