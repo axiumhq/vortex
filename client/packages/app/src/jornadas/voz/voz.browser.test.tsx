@@ -394,12 +394,54 @@ describe("palco em tela cheia", () => {
       await expect.element(deslizante()).toHaveAttribute("aria-valuetext", "0%");
     });
 
-    it("voz (0–100%) e transmissão (0–300%) são independentes no mesmo menu", async () => {
+    it("a voz vai de 0% a 300% pelo teclado, de 5 em 5, com marca em 100%", async () => {
+      await abrirTransmissao(true);
+      await abrirMenuDoFoco();
+      const vozEl = volumeDaVoz().element() as HTMLInputElement;
+      expect(vozEl.min).toBe("0");
+      expect(vozEl.max).toBe("300");
+      expect(vozEl.step).toBe("5");
+      expect(vozEl.getAttribute("aria-valuetext")).toBe("100%");
+      expect([...(vozEl.list?.options ?? [])].map((o) => o.value)).toEqual(["100"]);
+
+      vozEl.focus();
+      await userEvent.keyboard("{ArrowRight}");
+      await expect.poll(() => lerVolume("U1")).toBe(105);
+      await userEvent.keyboard("{End}");
+      await expect.poll(() => lerVolume("U1")).toBe(300);
+      await expect.element(volumeDaVoz()).toHaveAttribute("aria-valuetext", "300%");
+      // A transmissão da mesma pessoa não se mexeu.
+      expect(lerVolumeDaTransmissao("U1")).toBe(100);
+      await userEvent.keyboard("{Home}");
+      await expect.poll(() => lerVolume("U1")).toBe(0);
+      await expect.element(volumeDaVoz()).toHaveAttribute("aria-valuetext", "0%");
+    });
+
+    it("o mouse leva a voz acima de 100%, e ela sobrevive a fechar e abrir de novo", async () => {
+      await abrirTransmissao(true);
+      await abrirMenuDoFoco();
+      const caixa = (volumeDaVoz().element() as HTMLInputElement).getBoundingClientRect();
+      await volumeDaVoz().click({ position: { x: Math.round(caixa.width * 0.9), y: Math.round(caixa.height / 2) } });
+      await expect.poll(() => lerVolume("U1")).toBeGreaterThan(200);
+      const escolhido = lerVolume("U1");
+      expect(escolhido % 5).toBe(0);
+      const guardados = JSON.parse(localStorage.getItem("vortex:volumes-de-voz") ?? "{}") as Record<string, number>;
+      expect(guardados.U1).toBe(escolhido);
+      expect(lerVolumeDaTransmissao("U1")).toBe(100);
+
+      desmontar();
+      fecharPalco();
+      await abrirTransmissao(true);
+      await abrirMenuDoFoco();
+      await expect.element(volumeDaVoz()).toHaveAttribute("aria-valuetext", `${String(escolhido)}%`);
+    });
+
+    it("voz e transmissão (as duas até 300%) são independentes no mesmo menu", async () => {
       await abrirTransmissao(true);
       await abrirMenuDoFoco();
       await expect.element(volumeDaVoz()).toBeVisible();
       const vozEl = volumeDaVoz().element() as HTMLInputElement;
-      expect(vozEl.max).toBe("100");
+      expect(vozEl.max).toBe("300");
       expect(vozEl.getAttribute("aria-valuetext")).toBe("100%");
       vozEl.focus();
       await userEvent.keyboard("{ArrowLeft}");

@@ -6,7 +6,7 @@ import { assinarQualquerSilencio, estaSilenciado } from "./sobrePessoas";
  *
  * ⚠ **Não existe no protocolo, e nem deveria.** É o que EU ouço de alguém — o
  * servidor não tem o que fazer com isso, e o LiveKit aplica o ganho no MEU
- * elemento de áudio. Mesma família de `sobrePessoas.ts`: dado local sobre
+ * `GainNode`. Mesma família de `sobrePessoas.ts`: dado local sobre
  * outra pessoa, keyed por ID de usuário, fora do preset pela regra mais dura do
  * projeto (carrega IDs de gente).
  *
@@ -25,13 +25,18 @@ const CHAVE = "vortex:volumes-de-voz";
 export const VOLUME_PADRAO = 100;
 
 /**
- * ⚠ **Teto em 100, e o design desenha 200.** O LiveKit só aplica ganho acima de
- * 1 com `webAudioMix`, que roteia todo o áudio por um `AudioContext`; sem ele
- * o volume vai para `HTMLMediaElement.volume`, que LANÇA acima de 1. Ligar o
- * mix mudaria o caminho de áudio da chamada inteira — e o ensurdecer, que
- * silencia os `<audio>`, deixaria de silenciar. Divergência dita, não esquecida.
+ * ⚠ **Até 300%, e acima de 100% é ganho real, não o `<audio>`.**
+ * `HTMLMediaElement.volume` LANÇA fora de [0, 1]; o motor dá a cada faixa de
+ * voz o MESMO `AudioContext` do som das telas e o LiveKit aplica o ganho num
+ * `GainNode` por faixa (ver `sdk/audioAmplificavel.ts`). Sem Web Audio no
+ * navegador o motor para em 100% — o valor guardado continua o escolhido.
+ *
+ * Valores guardados quando o teto era 100 continuam válidos sem migração: o
+ * intervalo antigo está dentro do novo, e 60% continua sendo 60%.
  */
-export const VOLUME_MAXIMO = 100;
+export const VOLUME_MAXIMO = 300;
+/** O passo do deslizante. O store aceita qualquer inteiro; a UI anda de 5 em 5. */
+export const VOLUME_PASSO = 5;
 
 type Ouvinte = () => void;
 
@@ -104,7 +109,7 @@ export function assinarVolume(userId: string, ouvinte: Ouvinte): () => void {
 }
 
 /**
- * O ganho que o LiveKit deve aplicar, de 0 a 1.
+ * O ganho que o LiveKit deve aplicar, de 0 a 3.
  *
  * Três eixos, e a ordem é do mais geral para o mais particular: **surdo** ganha
  * de **silenciado**, que ganha do **volume** — como o fone ganha do microfone
