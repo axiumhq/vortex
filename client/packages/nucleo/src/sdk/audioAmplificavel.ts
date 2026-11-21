@@ -80,10 +80,10 @@ interface Plataforma {
 }
 
 /**
- * `element.volume` funciona aqui? Por capacidade primeiro: escrever num
- * elemento de teste e reler — no iOS o atributo é só leitura e continua em 1.
- * A detecção do iOS/iPadOS (inclusive o iPad que se apresenta como Mac com
- * toque) fica de reserva para quando não há documento onde testar.
+ * `element.volume` funciona aqui? Primeiro a detecção do iOS/iPadOS (inclusive
+ * o iPad que se apresenta como Mac com toque), que responde sem precisar de
+ * documento; fora dele, por capacidade: escrever num elemento de teste e
+ * reler — onde o atributo é só leitura, ele continua em 1.
  */
 export function elementoControlaVolume(
   doc: Document | undefined = typeof document === "undefined" ? undefined : document,
