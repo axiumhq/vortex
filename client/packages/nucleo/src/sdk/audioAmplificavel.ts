@@ -24,6 +24,21 @@
  * `AudioContext.setSinkId` o som continuaria no dispositivo padrão enquanto o
  * resto ia para o fone escolhido.
  *
+ * ⚠ **Onde o contexto NÃO troca de saída (Firefox), até 100% a faixa toca pelo
+ * ELEMENTO.** `HTMLMediaElement.setSinkId` existe lá e é por ele que a sala
+ * leva o som ao fone escolhido; passar tudo pelo contexto trocaria "ouvir no
+ * fone" por "poder passar de 100%", que ninguém pediu. Só acima de 100% a faixa
+ * vai para o contexto — e aí o dispositivo padrão é o preço aceito do ganho.
+ * Onde o contexto troca de saída, toda faixa fica nele e nada alterna.
+ *
+ * ⚠ **No contexto, o elemento tem de CONTINUAR mudo.** `Room.startAudio()`
+ * desmuta todo `<audio>` remoto quando a sala não usa `webAudioMix` — e ele
+ * roda quando o microfone local é adquirido e quando a página volta a ficar
+ * visível no iOS. Desmutado, o elemento tocaria junto do `GainNode`: voz
+ * dobrada a 100% e audível a 0% (no iOS `element.volume` não tem efeito). Um
+ * ouvinte de `volumechange` no próprio elemento devolve o mudo, venha de onde
+ * vier o desmute.
+ *
  * O anel de "falando" não passa por aqui: `ActiveSpeakersChanged` é calculado
  * pelo servidor a partir dos pacotes que ELE recebe, antes de qualquer ganho
  * local.
@@ -52,11 +67,11 @@ export const GANHO_MAXIMO = 3;
 
 export interface AudioAmplificavel {
   /**
-   * A faixa chegou (primeira assinatura, re-assinatura ou reconexão): dá o
-   * contexto, anexa se ninguém anexou e aplica o ganho, de 0 a 3.
+   * A faixa chegou (primeira assinatura, re-assinatura ou reconexão): escolhe
+   * o caminho, anexa se ninguém anexou e aplica o ganho, de 0 a 3.
    */
   receber(faixa: FaixaAmplificavel, ganho: number): void;
-  /** Reaplica um ganho numa faixa já anexada. */
+  /** Reaplica um ganho numa faixa já anexada (e troca de caminho se preciso). */
   aplicar(faixa: FaixaAmplificavel, ganho: number): void;
   /** O seletor de saída mudou. `undefined` ou `"default"` = padrão do sistema. */
   trocarSaida(deviceId: string | undefined): Promise<void>;
@@ -69,8 +84,10 @@ type ContextoComSaida = AudioContext & { setSinkId?: (id: string) => Promise<voi
 export function criarAudioAmplificavel(opcoes: OpcoesDoAudioAmplificavel): AudioAmplificavel {
   let contexto: ContextoComSaida | undefined;
   let saida: string | undefined;
-  /* Faixas que receberam o contexto. Fraco: a faixa morre com a assinatura. */
+  /* Faixas tocando pelo contexto AGORA. Fraco: a faixa morre com a assinatura. */
   let comContexto = new WeakSet<FaixaAmplificavel>();
+  /* Elementos que já têm o guarda de mudo — um ouvinte por elemento. */
+  const guardados = new WeakSet<HTMLMediaElement>();
 
   function obterContexto(): ContextoComSaida | undefined {
     if (!contexto) {
@@ -81,7 +98,7 @@ export function criarAudioAmplificavel(opcoes: OpcoesDoAudioAmplificavel): Audio
   }
 
   async function aplicarSaidaNoContexto(c: ContextoComSaida): Promise<void> {
-    if (!c.setSinkId) return;
+    if (typeof c.setSinkId !== "function") return;
     /* `"default"` não é aceito por `AudioContext.setSinkId`; a string vazia é o
        padrão do sistema. */
     const id = saida === undefined || saida === "default" ? "" : saida;
@@ -92,26 +109,66 @@ export function criarAudioAmplificavel(opcoes: OpcoesDoAudioAmplificavel): Audio
     }
   }
 
+  /** O contexto onde esta faixa deve tocar com este ganho, ou nenhum. */
+  function contextoPara(ganho: number): ContextoComSaida | undefined {
+    const c = obterContexto();
+    if (!c) return undefined;
+    /* Contexto que não troca de saída só compensa onde o elemento não alcança. */
+    if (typeof c.setSinkId !== "function" && ganho <= 1) return undefined;
+    return c;
+  }
+
+  function guardarMudo(faixa: FaixaAmplificavel): void {
+    for (const el of faixa.attachedElements) {
+      if (comContexto.has(faixa)) el.muted = true;
+      if (guardados.has(el)) continue;
+      guardados.add(el);
+      el.addEventListener("volumechange", () => {
+        /* Desmutado por fora (`startAudio`) enquanto toca pelo contexto. */
+        if (comContexto.has(faixa) && !el.muted) el.muted = true;
+      });
+    }
+  }
+
+  function irParaContexto(faixa: FaixaAmplificavel, c: ContextoComSaida): void {
+    if (comContexto.has(faixa)) return;
+    /* Antes do `attach` é ele que liga o `GainNode`; depois, liga na hora. */
+    faixa.setAudioContext(c);
+    comContexto.add(faixa);
+  }
+
+  function irParaElemento(faixa: FaixaAmplificavel): void {
+    if (!comContexto.has(faixa)) return;
+    comContexto.delete(faixa);
+    faixa.setAudioContext(undefined);
+    /* O `attach` com contexto deixou o elemento mudo; quem toca agora é ele. */
+    for (const el of faixa.attachedElements) el.muted = false;
+  }
+
+  function limpar(ganho: number): number {
+    return Number.isFinite(ganho) ? Math.max(0, ganho) : 1;
+  }
+
   function aplicar(faixa: FaixaAmplificavel, ganho: number): void {
+    const g = limpar(ganho);
+    const c = contextoPara(g);
+    if (c) irParaContexto(faixa, c);
+    else irParaElemento(faixa);
+    guardarMudo(faixa);
     /*
-      ⚠ **Sem contexto o teto volta a ser 1**, e não é cautela: o LiveKit
+      ⚠ **Fora do contexto o teto volta a ser 1**, e não é cautela: o LiveKit
       escreveria 3 em `HTMLMediaElement.volume` e LANÇARIA dentro do handler
       de `TrackSubscribed`, derrubando o som inteiro em vez de só o ganho
-      extra.
+      extra. O percentual guardado não muda; só o que se consegue aplicar.
     */
     const teto = comContexto.has(faixa) ? GANHO_MAXIMO : 1;
-    const limpo = Number.isFinite(ganho) ? ganho : 1;
-    faixa.setVolume(Math.min(teto, Math.max(0, limpo)));
+    faixa.setVolume(Math.min(teto, g));
   }
 
   return {
     receber(faixa, ganho) {
-      const c = obterContexto();
-      if (c && !comContexto.has(faixa)) {
-        /* ANTES do `attach`: é ele que liga o `GainNode` e emudece o elemento. */
-        faixa.setAudioContext(c);
-        comContexto.add(faixa);
-      }
+      const c = contextoPara(limpar(ganho));
+      if (c) irParaContexto(faixa, c);
       if (faixa.attachedElements.length === 0) opcoes.destino().appendChild(faixa.attach());
       aplicar(faixa, ganho);
     },

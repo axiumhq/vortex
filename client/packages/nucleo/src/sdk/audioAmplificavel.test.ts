@@ -13,6 +13,8 @@ function faixa() {
     attach() {
       ordem.push("attach");
       const el = document.createElement("audio");
+      /* Como o LiveKit: com contexto, o elemento nasce mudo e o som sai do GainNode. */
+      if (f.contexto) el.muted = true;
       f.attachedElements.push(el);
       return el;
     },
@@ -38,6 +40,19 @@ function espiao() {
 
 function contexto(): AudioContext {
   return espiao().ctx;
+}
+
+/** Firefox: há Web Audio, mas o contexto não troca de saída. */
+function contextoSemSaida(): AudioContext {
+  return { close: vi.fn(() => Promise.resolve()) } as unknown as AudioContext;
+}
+
+/** O que `Room.startAudio()` faz com todo `<audio>` remoto sem `webAudioMix`. */
+function startAudio(el: HTMLMediaElement) {
+  el.muted = false;
+  /* O `Event` do jsdom deste documento, e não o global do Node. */
+  const Evento = el.ownerDocument.defaultView?.Event ?? Event;
+  el.dispatchEvent(new Evento("volumechange"));
 }
 
 function montar(ganhos: Record<string, number>, criar: () => AudioContext | undefined = contexto) {
@@ -154,5 +169,91 @@ describe("áudio amplificável (voz e som da tela)", () => {
     expect(a.volume).toBe(3);
     expect(b.volume).toBe(0);
     expect(c.volume).toBe(1);
+  });
+
+  it("startAudio() não desmuta o elemento de uma faixa que toca pelo contexto", () => {
+    const { som } = montar({ ana: 0 });
+    const f = faixa();
+    som.receber("ana", f);
+    const el = f.attachedElements[0]!;
+    expect(el.muted).toBe(true);
+    startAudio(el);
+    // Sem o guarda, a 0% a voz voltaria a tocar inteira pelo elemento.
+    expect(el.muted).toBe(true);
+    expect(f.volume).toBe(0);
+  });
+
+  it("contexto ligado DEPOIS do attach também deixa o elemento mudo", () => {
+    const ganhos = { ana: 0.5 };
+    const { som } = montar(ganhos, contextoSemSaida);
+    const f = faixa();
+    som.receber("ana", f);
+    ganhos.ana = 2;
+    som.aplicar("ana", f);
+    const el = f.attachedElements[0]!;
+    expect(f.contexto).toBeDefined();
+    expect(el.muted).toBe(true);
+    startAudio(el);
+    expect(el.muted).toBe(true);
+  });
+
+  describe("onde o contexto troca de saída (Chrome)", () => {
+    it("toda faixa fica no contexto, inclusive abaixo de 100%", () => {
+      const ganhos = { ana: 0.5 };
+      const { som } = montar(ganhos);
+      const f = faixa();
+      som.receber("ana", f);
+      expect(f.contexto).toBeDefined();
+      ganhos.ana = 2;
+      som.aplicar("ana", f);
+      ganhos.ana = 0.3;
+      som.aplicar("ana", f);
+      expect(f.ordem.filter((o) => o === "contexto")).toHaveLength(1);
+      expect(f.volume).toBe(0.3);
+    });
+  });
+
+  describe("onde só o elemento troca de saída (Firefox)", () => {
+    it("até 100% toca pelo ELEMENTO, que segue a saída escolhida", () => {
+      const { som } = montar({ ana: 0.6 }, contextoSemSaida);
+      const f = faixa();
+      som.receber("ana", f);
+      const el = f.attachedElements[0]!;
+      expect(f.contexto).toBeUndefined();
+      expect(el.muted).toBe(false);
+      expect(f.volume).toBe(0.6);
+      // startAudio desmuta o elemento, que aqui É a saída: nada a desfazer.
+      startAudio(el);
+      expect(el.muted).toBe(false);
+    });
+
+    it("acima de 100% vai para o contexto, e volta ao elemento ao descer", () => {
+      const ganhos = { ana: 1 };
+      const { som } = montar(ganhos, contextoSemSaida);
+      const f = faixa();
+      som.receber("ana", f);
+      const el = f.attachedElements[0]!;
+      expect(f.contexto).toBeUndefined();
+
+      ganhos.ana = 2.5;
+      som.aplicar("ana", f);
+      expect(f.contexto).toBeDefined();
+      expect(el.muted).toBe(true);
+      expect(f.volume).toBe(2.5);
+
+      ganhos.ana = 0.8;
+      som.aplicar("ana", f);
+      expect(f.contexto).toBeUndefined();
+      expect(el.muted).toBe(false);
+      expect(f.volume).toBe(0.8);
+    });
+
+    it("faixa que chega acima de 100% já nasce no contexto, antes do attach", () => {
+      const { som } = montar({ ana: 3 }, contextoSemSaida);
+      const f = faixa();
+      som.receber("ana", f);
+      expect(f.ordem).toEqual(["contexto", "attach"]);
+      expect(f.volume).toBe(3);
+    });
   });
 });
