@@ -116,6 +116,7 @@ import {
   volumeEfetivoDaTransmissao,
 } from "../store/volumesDeTransmissao";
 import { criarAudioAmplificavel } from "./audioAmplificavel";
+import { criarContextoDeSaida } from "./contextoDeSaida";
 import { criarAssinaturaDeVideo } from "./assinaturaDeVideo";
 import { pararTodos } from "./efeitosSonoros";
 import {
@@ -986,32 +987,9 @@ function definirVolumeDe(userId: string): void {
  * fechado na saída; um `GainNode` por faixa.
  */
 const audioAmplificavel = criarAudioAmplificavel({
-  criarContexto: criarContextoDeSaida,
+  criarContexto: () => criarContextoDeSaida(),
   destino: elementoDeAudio,
 });
-
-/**
- * ⚠ **Com a voz no contexto, contexto suspenso é sala MUDA.** Ele nasce na
- * primeira faixa, que chega depois do clique em "entrar" — o navegador aceita
- * pela ativação que a página já teve. Entrar sem gesto nenhum (moderação te
- * moveu, a aba voltou para a chamada sozinha) pode deixá-lo suspenso; o
- * LiveKit tenta `resume()` uma vez, e aqui o próximo toque ou tecla tenta de
- * novo, em vez de a pessoa ouvir silêncio até sair e entrar.
- */
-function criarContextoDeSaida(): AudioContext | undefined {
-  if (typeof AudioContext === "undefined") return undefined;
-  const contexto = new AudioContext();
-  if (contexto.state === "suspended" && typeof document !== "undefined") {
-    const retomar = () => {
-      document.removeEventListener("pointerdown", retomar, true);
-      document.removeEventListener("keydown", retomar, true);
-      if (contexto.state === "suspended") void contexto.resume().catch(() => {});
-    };
-    document.addEventListener("pointerdown", retomar, true);
-    document.addEventListener("keydown", retomar, true);
-  }
-  return contexto;
-}
 
 const publicacoes = publicacoesDaSala(() => sala);
 
