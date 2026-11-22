@@ -90,7 +90,7 @@ describe("Shell fixo", () => {
     const acoes: string[] = [];
     let estadoJanela: (estado: { maximizada: boolean; comFoco: boolean }) => void = () => undefined;
     window.vortex = {
-      janela: async (acao) => { acoes.push(acao); },
+      janela: (acao) => { acoes.push(acao); return Promise.resolve(); },
       assinarJanela: (ouvinte) => {
         estadoJanela = ouvinte;
         ouvinte({ maximizada: false, comFoco: true });
