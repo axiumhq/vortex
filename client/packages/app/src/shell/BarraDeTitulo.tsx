@@ -20,7 +20,8 @@ export interface BarraDeTituloProps {
 
 /** Só o símbolo (20px) e o nome do app e os botões da janela. Nada mais mora aqui. */
 export function BarraDeTitulo({ aoMinimizar, aoMaximizar, aoRestaurar, maximizada = false, aoFechar, avisos }: BarraDeTituloProps) {
-  const temJanela = aoMinimizar ?? aoMaximizar ?? aoRestaurar ?? aoFechar;
+  const aoAlternarMaximizacao = maximizada ? aoRestaurar : aoMaximizar;
+  const temJanela = aoMinimizar ?? aoAlternarMaximizacao ?? aoFechar;
   return (
     <div
       role="banner"
@@ -47,13 +48,13 @@ export function BarraDeTitulo({ aoMinimizar, aoMaximizar, aoRestaurar, maximizad
               onClick={aoMinimizar}
             />
           )}
-          {(aoMaximizar || aoRestaurar) && (
+          {aoAlternarMaximizacao && (
             <Botao
               variante="fantasma"
               tamanho="sm"
               icone={<Maximizar />}
               aria-label={maximizada ? shell.barraDeTitulo.restaurar : shell.barraDeTitulo.maximizar}
-              onClick={maximizada ? aoRestaurar : aoMaximizar}
+              onClick={aoAlternarMaximizacao}
             />
           )}
           {aoFechar && (
