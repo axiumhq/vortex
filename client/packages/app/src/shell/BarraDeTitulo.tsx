@@ -4,21 +4,24 @@ import { comum, shell } from "../textos";
 import { Botao } from "../ui/ds";
 import { Marca } from "../ui/Marca";
 import { AvisoDeConexao } from "./AvisoDeConexao";
-import { Fechar, Maximizar, Minimizar } from "../ui/icones";
+import { Fechar, Maximizar, Minimizar, Restaurar } from "../ui/icones";
 import css from "./Regioes.module.css";
 
 export interface BarraDeTituloProps {
   /** Cada botão da janela só existe se o tratador existe (na web não há janela para controlar). */
   aoMinimizar?: () => void;
   aoMaximizar?: () => void;
+  aoRestaurar?: () => void;
+  maximizada?: boolean;
   aoFechar?: () => void;
   /** Avisos do lugar atual (a emergência do servidor), ao lado do de conexão. */
   avisos?: ReactNode;
 }
 
 /** Só o símbolo (20px) e o nome do app e os botões da janela. Nada mais mora aqui. */
-export function BarraDeTitulo({ aoMinimizar, aoMaximizar, aoFechar, avisos }: BarraDeTituloProps) {
-  const temJanela = aoMinimizar ?? aoMaximizar ?? aoFechar;
+export function BarraDeTitulo({ aoMinimizar, aoMaximizar, aoRestaurar, maximizada = false, aoFechar, avisos }: BarraDeTituloProps) {
+  const aoAlternarMaximizacao = maximizada ? aoRestaurar : aoMaximizar;
+  const temJanela = aoMinimizar ?? aoAlternarMaximizacao ?? aoFechar;
   return (
     <div
       role="banner"
@@ -45,13 +48,13 @@ export function BarraDeTitulo({ aoMinimizar, aoMaximizar, aoFechar, avisos }: Ba
               onClick={aoMinimizar}
             />
           )}
-          {aoMaximizar && (
+          {aoAlternarMaximizacao && (
             <Botao
               variante="fantasma"
               tamanho="sm"
-              icone={<Maximizar />}
-              aria-label={shell.barraDeTitulo.maximizar}
-              onClick={aoMaximizar}
+              icone={maximizada ? <Restaurar /> : <Maximizar />}
+              aria-label={maximizada ? shell.barraDeTitulo.restaurar : shell.barraDeTitulo.maximizar}
+              onClick={aoAlternarMaximizacao}
             />
           )}
           {aoFechar && (

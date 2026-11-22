@@ -34,6 +34,7 @@ import {
   Timer as LTimer,
   LogOut as LLogOut,
   Maximize2 as LMaximize2,
+  Minimize2 as LMinimize2,
   Minus as LMinus,
   MessageSquare as LMessageSquare,
   Mic as LMic,
@@ -152,6 +153,7 @@ export const Cadeado = envolver(LLock);
 export const ModoLento = envolver(LTimer);
 export const Sair = envolver(LLogOut);
 export const Maximizar = envolver(LMaximize2);
+export const Restaurar = envolver(LMinimize2);
 export const Minimizar = envolver(LMinus);
 export const Mensagem = envolver(LMessageSquare);
 export const Microfone = envolver(LMic);
