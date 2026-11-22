@@ -4,7 +4,7 @@ import { comum, shell } from "../textos";
 import { Botao } from "../ui/ds";
 import { Marca } from "../ui/Marca";
 import { AvisoDeConexao } from "./AvisoDeConexao";
-import { Fechar, Maximizar, Minimizar } from "../ui/icones";
+import { Fechar, Maximizar, Minimizar, Restaurar } from "../ui/icones";
 import css from "./Regioes.module.css";
 
 export interface BarraDeTituloProps {
@@ -52,7 +52,7 @@ export function BarraDeTitulo({ aoMinimizar, aoMaximizar, aoRestaurar, maximizad
             <Botao
               variante="fantasma"
               tamanho="sm"
-              icone={<Maximizar />}
+              icone={maximizada ? <Restaurar /> : <Maximizar />}
               aria-label={maximizada ? shell.barraDeTitulo.restaurar : shell.barraDeTitulo.maximizar}
               onClick={aoAlternarMaximizacao}
             />
