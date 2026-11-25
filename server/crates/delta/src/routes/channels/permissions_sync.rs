@@ -101,3 +101,92 @@ pub async fn sync_channel_permissions(
 
     Ok(Json(channel.into()))
 }
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashMap;
+
+    use crate::util::test::TestHarness;
+    use revolt_database::{events::client::EventV1, Category, Channel, Member, PartialServer};
+    use revolt_models::v0;
+    use revolt_permissions::{ChannelPermission, OverrideField};
+    use rocket::http::{Header, Status};
+
+    /// Segurança: sincronizar o pai com uma categoria privada leva os tópicos
+    /// junto.
+    #[rocket::async_test]
+    async fn sincronizar_com_categoria_privada_fecha_os_topicos() {
+        let mut harness = TestHarness::new().await;
+        let (_, owner_session, owner) = harness.new_user().await;
+        let (_, member_session, member) = harness.new_user().await;
+        let (mut server, channels) = harness.new_server(&owner).await;
+        Member::create(&harness.db, &server, &member, None)
+            .await
+            .expect("`Member`");
+
+        let pai = &channels[0];
+        server
+            .update(
+                &harness.db,
+                PartialServer {
+                    categories: Some(vec![Category {
+                        id: "privada".to_string(),
+                        title: "Privada".to_string(),
+                        channels: vec![pai.id().to_string()],
+                        default_permissions: Some(OverrideField {
+                            a: 0,
+                            d: ChannelPermission::ViewChannel as i64,
+                        }),
+                        role_permissions: HashMap::new(),
+                    }]),
+                    ..Default::default()
+                },
+                vec![],
+            )
+            .await
+            .expect("`Server` categories");
+
+        let topico = Channel::create_thread(
+            &harness.db,
+            pai,
+            &owner.id,
+            v0::DataCreateThread {
+                name: "Tópico".to_string(),
+                message: None,
+                tags: vec![],
+            },
+        )
+        .await
+        .expect("`Channel`");
+        assert_eq!(
+            harness.list_threads(&member_session, &server.id, false).await,
+            vec![topico.id().to_string()]
+        );
+
+        let response = harness
+            .client
+            .put(format!("/channels/{}/permissions/sync", pai.id()))
+            .header(Header::new("x-session-token", owner_session.token.to_string()))
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Ok);
+        drop(response);
+
+        // A cópia acontece antes da resposta: sem ela, o membro ainda vê.
+        assert!(harness
+            .list_threads(&member_session, &server.id, false)
+            .await
+            .is_empty());
+
+        let id = topico.id().to_string();
+        harness
+            .wait_for_event(&server.id, |event| {
+                matches!(
+                    event,
+                    EventV1::ChannelUpdate { id: alvo, data, .. }
+                        if alvo == &id && data.default_permissions.is_some()
+                )
+            })
+            .await;
+    }
+}
