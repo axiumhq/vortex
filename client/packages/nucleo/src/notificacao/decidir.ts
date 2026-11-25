@@ -32,6 +32,14 @@ export type MensagemRecebida = {
   readonly mencionaTodos: boolean;
   /** Um cargo que você TEM foi mencionado. */
   readonly mencionaCargo: boolean;
+  /**
+   * A mensagem é de um TÓPICO. Só menção avisa: a mensagem comum de um tópico
+   * seguido marca não lida e nada mais — nem som, nem toast, nem push, mesmo
+   * que o nível do canal ou do servidor seja "todas as mensagens".
+   */
+  readonly ehTopico?: boolean;
+  /** O canal pai do tópico — o silêncio e o nível dele valem para o tópico. */
+  readonly paiId?: string;
 };
 
 export type Contexto = {
@@ -147,7 +155,7 @@ export function decidirEntrega(
     de canal de servidor é só menções — bipe por mensagem em servidor
     movimentado é o motivo pelo qual as pessoas desligam notificação inteira.
   */
-  if (evento === "mensagem" && ctx.nivel !== "todas") return undefined;
+  if (evento === "mensagem" && (m.ehTopico || ctx.nivel !== "todas")) return undefined;
 
   return canaisDe(evento, ctx);
 }

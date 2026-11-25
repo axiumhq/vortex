@@ -63,6 +63,28 @@ layout customizável. Os três últimos já eram não-objetivos do PRD.
 | 7 | Administração avançada (modo de entrada, fila de pedidos, emergência, auditoria) |
 | 8 | Mais temas |
 
+### Onda 4 — Tópicos (em andamento)
+
+Entregue até aqui, no `nucleo`:
+
+- Tópico é um canal de texto com `thread`: mensagens, digitação, não lidas,
+  permissões e composer vêm de graça. Listas por canal pai, por servidor e "os
+  que eu sigo", contagem de respostas e abertura de post, mais as escritas
+  (criar, arquivar, seguir). Índice mensagem para tópico (PR #454).
+- Não lidas e menções de tópico no rollup do servidor (rail).
+
+Decisões do dono:
+
+| Decisão | Regra |
+| --- | --- |
+| Rollup do servidor | O tópico só acende o servidor se a pessoa o **segue** ou se há **menção** nele. Tópico não seguido e sem menção não conta |
+| Silêncio | O silêncio do canal pai vale para os tópicos dele, e o do próprio tópico também. Silêncio tira a não lida; a menção atravessa, como no canal comum |
+| Som e notificação do sistema | Só para **menção**, com o mesmo som e a mesma notificação de canal, respeitando silêncio e foco. Mensagem comum em tópico seguido só marca não lida |
+| Ler | Abrir o tópico faz `ack`, como num canal |
+
+Toca store e rollup: precisa do gate do firehose antes de ir para produção
+(adiado, ver dívidas).
+
 ### Lógica pronta para as próximas ondas
 
 Módulos do `nucleo` que o `app` ainda não usa e que ficaram de propósito.
@@ -75,8 +97,10 @@ Módulos do `nucleo` que o `app` ainda não usa e que ficaram de propósito.
 | `ui-logica/expressoes/atalhos`, `nomes`, `recentes` | Onda 6, soundboard e figurinhas |
 | `store/ferramentaDoComposer` | Onda 6, seletores do composer (emoji, figurinha, soundboard) |
 
-Os módulos de eventos, tópicos e enquete já são usados pelo `app` e não aparecem
-acima. Cerca de 40 outros módulos sem uso previsto foram apagados junto com os
+Os módulos de eventos e enquete já são usados pelo `app` e não aparecem acima.
+Os de tópicos (`sdk/topicos`, `sdk/vortexCanal`, hooks de `store/hooks`) estão
+no `nucleo` e já alimentam o aviso de não lidas do servidor no rail; as telas
+de tópico no `app` são a próxima etapa da onda 4 (seção abaixo). Cerca de 40 outros módulos sem uso previsto foram apagados junto com os
 testes (histórico no git, commit desta entrega).
 
 ## Dívidas abertas

@@ -132,7 +132,12 @@ import { pode } from "./permissoes";
 import { notificarMudancaDePermissoes } from "../store/permissoes";
 import { mudancaDeAmizade } from "../notificacao/decidir";
 import { emFila } from "../lib/fila";
-import { somarConversas, somarPorServidor } from "./somaDeNaoLidas";
+import {
+  naoLidasQueSobem,
+  somarConversas,
+  somarPorServidor,
+  type InfoDeTopico,
+} from "./somaDeNaoLidas";
 import { aceitarAmizade, buscarEmComum, desfazerAmizade } from "./social";
 import { sincronizarPush } from "../notificacao/push";
 import { dentro } from "../store/sessao";
@@ -161,7 +166,11 @@ import {
   type ServerSnapshot,
 } from "./domain";
 import { calcularLayout, type Layout } from "./agrupamento";
-import { aplicarEventoCru as aplicarEventoCruDeCanal, lerTopico } from "./vortexCanal";
+import {
+  aplicarEventoCru as aplicarEventoCruDeCanal,
+  assinarMetaDeCanal,
+  lerTopico,
+} from "./vortexCanal";
 import {
   ehEntradaNoTopico,
   juntarOuAbrir,
@@ -3398,6 +3407,45 @@ export type Contagem = { naoLidas: number; mencoes: number };
 
 const ZERO: Contagem = { naoLidas: 0, mencoes: 0 };
 
+/**
+ * O tópico, como o rollup o enxerga — `undefined` para canal comum.
+ *
+ * Lê o registro de `vortexCanal` (já em memória), nunca o SDK: é chamado por
+ * canal COM contagem, dezenas, e no caminho de `messageCreate`.
+ */
+function infoDeTopico(channelId: string): InfoDeTopico | undefined {
+  const meta = lerTopico(channelId);
+  if (!meta) return undefined;
+  return {
+    paiId: meta.paiId,
+    seguindo: usuarioLocal !== undefined && meta.seguidores.includes(usuarioLocal),
+  };
+}
+
+/** O servidor de um canal — o tópico cai no registro se o SDK ainda não o tem. */
+function servidorDoCanal(channelId: string): string | undefined {
+  return client.channels.get(channelId)?.serverId ?? lerTopico(channelId)?.serverId;
+}
+
+/**
+ * Seguir ou deixar de seguir MUDA a conta do servidor sem nenhuma mensagem.
+ *
+ * Só recontar quando o "sigo" daquele tópico MUDOU e ele tem contagem: o meta
+ * é republicado a cada mensagem do tópico, e uma varredura por mensagem seria
+ * o custo que o caminho incremental existe para evitar.
+ */
+const seguidoConhecido = new Map<string, boolean>();
+assinarMetaDeCanal((ids) => {
+  let mudou = false;
+  for (const id of ids) {
+    const seguindo = infoDeTopico(id)?.seguindo ?? false;
+    if (seguidoConhecido.get(id) === seguindo) continue;
+    seguidoConhecido.set(id, seguindo);
+    if (contagemPorCanal.has(id)) mudou = true;
+  }
+  if (mudou) recontarServidores();
+});
+
 const contagemPorCanal = new Map<string, Contagem>();
 const contagemPorServidor = new Map<string, Contagem>();
 
@@ -3623,18 +3671,13 @@ function somarNaoLida(channelId: string): void {
   contagemPorCanal.set(channelId, { naoLidas: 1, mencoes: atual.mencoes });
   reemitirCanal(channelId);
 
-  const serverId = client.channels.get(channelId)?.serverId;
-  if (serverId) {
-    const servidor = contagemDe(contagemPorServidor, serverId);
-    contagemPorServidor.set(serverId, {
-      naoLidas: servidor.naoLidas + 1,
-      mencoes: servidor.mencoes,
-    });
-    reemitirServidor(serverId);
+  if (servidorDoCanal(channelId)) {
+    /* Recontar e não somar +1: silêncio e "não sigo" mudam o que sobe. */
+    recontarServidores();
   } else {
     reemitirConversas();
+    reemitirTotais();
   }
-  reemitirTotais();
 }
 
 /**
@@ -3736,8 +3779,9 @@ function zerarContagem(channelId: string): void {
 function recontarServidores(): void {
   const nova = somarPorServidor(
     contagemPorCanal,
-    (id) => client.channels.get(id)?.serverId,
+    servidorDoCanal,
     estaMudo,
+    infoDeTopico,
   );
   const tocados = new Set([...contagemPorServidor.keys(), ...nova.keys()]);
   for (const serverId of tocados) {
@@ -4045,6 +4089,9 @@ function avisarChegada(message: Message): void {
   */
   const channelId = message.channelId;
   const mensagemId = message.id;
+  /* Tópico é canal: a menção avisa como em qualquer canal; a mensagem comum
+     de um tópico seguido só marca não lida (ver `decidirEntrega`). */
+  const topico = lerTopico(channelId);
   const responder = () =>
     pode(channelId, "enviar")
       ? (texto: string) => {
@@ -4056,6 +4103,7 @@ function avisarChegada(message: Message): void {
     channelId: message.channelId,
     serverId: canal?.serverId,
     tipoDoCanal: tipo === "DirectMessage" ? "dm" : tipo === "Group" ? "grupo" : "servidor",
+    ...(topico ? { ehTopico: true, paiId: topico.paiId } : {}),
     autorNome: message.masquerade?.name ?? message.author?.displayName ?? "Alguém",
     canalNome: canal?.name,
     servidorNome: canal?.server?.name,
@@ -4080,7 +4128,7 @@ function contabilizarNaoLida(channelId: string, conteudo: string): void {
   });
   reemitirCanal(channelId);
 
-  const serverId = client.channels.get(channelId)?.serverId;
+  const serverId = servidorDoCanal(channelId);
   if (!serverId) {
     reemitirConversas();
     return;
@@ -4091,7 +4139,7 @@ function contabilizarNaoLida(channelId: string, conteudo: string): void {
     `messageCreate`: recontar tudo aqui seria pagar a varredura por mensagem.
     Os dois caminhos concordam porque perguntam a mesma coisa (`estaMudo`).
   */
-  const soma = estaMudo(channelId, serverId) ? 0 : 1;
+  const soma = naoLidasQueSobem(1, channelId, serverId, estaMudo, infoDeTopico(channelId));
   if (soma === 0 && mencao === 0) return;
   const servidor = contagemDe(contagemPorServidor, serverId);
   contagemPorServidor.set(serverId, {

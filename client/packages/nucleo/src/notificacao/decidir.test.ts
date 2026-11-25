@@ -270,3 +270,32 @@ describe("chamada recebida", () => {
     expect(decidirEntregaDeChamada(chamada({ prefs: { ...prefs, matriz: new Set() } }))).toBeUndefined();
   });
 });
+
+describe("tópicos: só a menção avisa", () => {
+  const topico = (m: Partial<MensagemRecebida> = {}) =>
+    msg({ ehTopico: true, paiId: "pai", ...m });
+
+  it("menção em tópico notifica como menção em canal", () => {
+    expect(canais(topico({ mencionaVoce: true }), ctx())).toEqual(
+      canais(msg({ mencionaVoce: true }), ctx()),
+    );
+    expect(decidirEntrega(topico({ mencionaVoce: true }), ctx())?.evento).toBe("mencaoDireta");
+  });
+
+  it("mensagem comum em tópico seguido não toca nem notifica", () => {
+    expect(decidirEntrega(topico(), ctx())).toBeUndefined();
+  });
+
+  it("nem com o nível do canal em \"todas\"", () => {
+    expect(decidirEntrega(topico(), ctx({ nivel: "todas", janelaEmFoco: true }))).toBeUndefined();
+    /* o canal comum, no mesmo nível, avisaria — a regra é do tópico */
+    expect(decidirEntrega(msg(), ctx({ nivel: "todas", janelaEmFoco: true }))).toBeDefined();
+  });
+
+  it("menção em tópico respeita silêncio e foco", () => {
+    expect(decidirEntrega(topico({ mencionaVoce: true }), ctx({ silenciado: true }))).toBeUndefined();
+    expect(
+      decidirEntrega(topico({ mencionaVoce: true }), ctx({ vendoCanal: true, janelaEmFoco: true })),
+    ).toBeUndefined();
+  });
+});
