@@ -6,6 +6,7 @@ import {
   lerFixados,
   type EstadoDeFixados,
 } from "nucleo/store/fixados";
+import { fecharPainelDeTopicos, lerPainelDeTopicos } from "nucleo/store/painelDeTopicos";
 import { useSyncExternalStore } from "react";
 
 import { devolverFoco, lembrarOrigemDoFoco } from "../busca/foco";
@@ -22,8 +23,9 @@ export function useFixados(): EstadoDeFixados {
  * devolveria o foco a quem o tinha de fato.
  */
 export function abrirFixadosDoCanal(canalId: string): void {
-  if (!lerBusca().aberta && !lerFixados().aberto) lembrarOrigemDoFoco();
+  if (!lerBusca().aberta && !lerFixados().aberto && !lerPainelDeTopicos().aberto) lembrarOrigemDoFoco();
   fecharBusca();
+  fecharPainelDeTopicos();
   abrirFixados(canalId);
 }
 

@@ -16,6 +16,8 @@ import {
 	useProntidao,
 	useServer,
 	useServidorAtivo,
+	useTemTopicos,
+	useTopicosSeguidosPorPai,
 	type PessoaNaSala,
 } from "nucleo/store/hooks";
 import type { CategoriaDeCanais } from "nucleo/sdk/domain";
@@ -32,6 +34,7 @@ import { aquecerVoz, aquecerVozQuandoOcioso } from "../voz/acoes";
 import { useSalaDoPalco } from "../voz/hooks";
 import { ConvidarPessoas } from "./ConvidarPessoas";
 import { CriarSala } from "./CriarSala";
+import { TopicosSeguidos } from "./TopicosSeguidos";
 import { useEntradaNaSala } from "./useEntradaNaSala";
 import css from "./Salas.module.css";
 
@@ -94,16 +97,18 @@ function SalaDaColuna({
 function LinhaDaColuna({
 	serverId,
 	canalId,
+	seguidos,
 }: {
 	serverId: string;
 	canalId: string;
+	seguidos: readonly string[] | undefined;
 }) {
 	const canal = useChannel(canalId);
 	if (!canal) return null;
 	return canal.tipo === "voz" ? (
 		<SalaDaColuna serverId={serverId} canalId={canalId} />
 	) : (
-		<CanalDaColuna serverId={serverId} canalId={canalId} />
+		<CanalDaColuna serverId={serverId} canalId={canalId} seguidos={seguidos} />
 	);
 }
 
@@ -123,9 +128,11 @@ function useColuna(serverId: string): readonly CategoriaDeCanais[] {
 function CanalDaColuna({
 	serverId,
 	canalId,
+	seguidos,
 }: {
 	serverId: string;
 	canalId: string;
+	seguidos: readonly string[] | undefined;
 }) {
 	const canal = useChannel(canalId);
 	const ativo = useCanalAtivo() === canalId;
@@ -146,6 +153,13 @@ function CanalDaColuna({
 					abrirTexto(serverId, canalId);
 				}}
 			/>
+			{seguidos !== undefined && (
+				<TopicosSeguidos
+					serverId={serverId}
+					nomeDoCanal={canal.name}
+					ids={seguidos}
+				/>
+			)}
 		</li>
 	);
 }
@@ -233,6 +247,9 @@ function ListaDoServidor({ serverId }: { serverId: string }) {
 	const emVoz = useCanaisDeVoz(serverId);
 	const emTexto = useCanaisDeTexto(serverId);
 	const semSala = emVoz.length === 0;
+	// Só com a função anunciada: sem ela o mapa nem é consultado.
+	const temTopicos = useTemTopicos();
+	const seguidosPorPai = useTopicosSeguidosPorPai();
 	if (semSala && emTexto.length === 0) {
 		return (
 			<ServidorSemSalas serverId={serverId} canalParaConvite={emTexto[0]} />
@@ -260,7 +277,12 @@ function ListaDoServidor({ serverId }: { serverId: string }) {
 						)}
 						<ul className={css.lista}>
 							{canais.map((id) => (
-								<LinhaDaColuna key={id} serverId={serverId} canalId={id} />
+								<LinhaDaColuna
+									key={id}
+									serverId={serverId}
+									canalId={id}
+									seguidos={temTopicos ? seguidosPorPai.get(id) : undefined}
+								/>
 							))}
 						</ul>
 					</section>

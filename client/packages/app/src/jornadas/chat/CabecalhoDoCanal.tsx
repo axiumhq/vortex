@@ -5,6 +5,7 @@ import { Cadeado, Canal } from "../../ui/icones";
 import { BotaoDeBusca } from "../busca/BotaoDeBusca";
 import { useAtalhoDeBusca } from "../busca/hooks";
 import { BotaoDeFixados } from "../fixados/BotaoDeFixados";
+import { BotaoDeTopicos } from "../topicos/BotaoDeTopicos";
 import { AreaDeChat } from "./AreaDeChat";
 import css from "./CabecalhoDoCanal.module.css";
 
@@ -36,6 +37,7 @@ export function CabecalhoDoCanal({ canalId, servidorId }: { canalId: string; ser
         </p>
       )}
       <div className={css.acoes}>
+        <BotaoDeTopicos canalId={canalId} />
         <BotaoDeFixados canalId={canalId} />
         <BotaoDeBusca canalId={canalId} servidorId={servidorId} />
       </div>
