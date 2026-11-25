@@ -10,7 +10,7 @@ use rocket::{serde::json::Json, State};
 
 use crate::util::{
     audit_log_reason::AuditLogReason,
-    overrides::{apply_overrides, check_override_changes},
+    overrides::{apply_overrides, check_override_changes, propagate_to_threads},
 };
 
 /// # Sync Permissions with Category
@@ -86,6 +86,8 @@ pub async fn sync_channel_permissions(
         &category.role_permissions,
     )
     .await?;
+
+    propagate_to_threads(db, &channel).await?;
 
     AuditLogEntryAction::ChannelEdit {
         channel: channel.id().to_string(),

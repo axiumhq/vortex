@@ -12,7 +12,9 @@ use rocket::{serde::json::Json, State};
 
 use crate::util::{
     audit_log_reason::AuditLogReason,
-    overrides::{apply_overrides, check_override_changes, has_overrides, normalize},
+    overrides::{
+        apply_overrides, check_override_changes, has_overrides, normalize, propagate_to_threads,
+    },
 };
 
 /// # Set Category Permissions
@@ -109,6 +111,7 @@ pub async fn set_category_permissions(
             .await
             .is_ok()
         {
+            propagate_to_threads(db, &channel).await.ok();
             sync_voice_permissions(db, voice_client, &channel, Some(&server), None)
                 .await
                 .ok();
