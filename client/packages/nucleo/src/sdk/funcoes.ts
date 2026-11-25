@@ -30,6 +30,9 @@ export function servidorTemFuncao(nome: string): boolean {
 
 export const servidorTemEnquetes = (): boolean => servidorTemFuncao("polls");
 
+/** O servidor anuncia tópicos (`features.vortex` com `"threads"`)? */
+export const servidorTemTopicos = (): boolean => servidorTemFuncao("threads");
+
 /**
  * Liga/desliga funções simuladas pelo arnês (sem servidor). `undefined`
  * volta a ler a configuração real. Só o arnês e os testes chamam.

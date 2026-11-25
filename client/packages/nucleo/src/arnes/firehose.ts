@@ -1806,8 +1806,8 @@ export async function seed(count: number, chunk = 250): Promise<string[]> {
   // Carga em massa e chegada incremental são caminhos diferentes. Misturar os
   // dois dá duas fontes competindo pela mesma lista.
   ensureWorld();
-  /* O arnês simula um servidor com enquetes (`features.vortex`). */
-  definirFuncoesDoArnes(["polls"]);
+  /* O arnês simula um servidor com enquetes e tópicos (`features.vortex`). */
+  definirFuncoesDoArnes(["polls", "threads"]);
 
   const ids: string[] = [];
 
@@ -1826,6 +1826,7 @@ export async function seed(count: number, chunk = 250): Promise<string[]> {
   semearExpressoesDoArnes(SERVER_ID);
   seedChannel(CHANNEL_ID, ids);
   semearEnquetes(ids);
+  semearTopicosDeMensagens(ids);
   ultimaLista = ids;
   // Agora sim: a partir daqui, mensagem nova chega por evento.
   startAdapter();
@@ -1890,6 +1891,41 @@ export function enquetesDoArnes(): { readonly aberta: string; readonly encerrada
  * prova a outra: a aberta tem prazo, voto e barra neutra; a encerrada tem
  * selo, troféu e barra verde.
  */
+/**
+ * Parte das mensagens do canal do firehose abre tópico — uma em cada 40.
+ *
+ * Sem isto o índice mensagem -> tópico nasce vazio no gate: `useTopicoDaMensagem`
+ * devolveria `undefined` em toda linha e o caminho "linha com tópico" nunca
+ * seria medido. Um em cada cinco desses arquivado, porque são os que o `Ready`
+ * não traz e que `carregarTopicosDoCanal` busca.
+ */
+function semearTopicosDeMensagens(ids: readonly string[]): void {
+  const eu = userIds[0]!;
+  const canais: object[] = [];
+  ids.forEach((mid, i) => {
+    if (i % 40 !== 17) return;
+    const quando = decodeTime(mid);
+    const id = ulidEm(quando + 2);
+    canais.push({
+      _id: id,
+      channel_type: "TextChannel",
+      server: SERVER_ID,
+      name: `tópico ${i}`,
+      last_message_id: ulidEm(quando + 60_000),
+      thread: {
+        parent: CHANNEL_ID,
+        owner: userIds[(i % (userIds.length - 1)) + 1] ?? eu,
+        message: mid,
+        archived: (i / 40) % 5 < 1,
+        tags: [],
+        followers: [eu],
+      },
+    });
+  });
+  for (const c of canais) client.channels.getOrCreate((c as { _id: string })._id, c as never);
+  anotarCanais(canais);
+}
+
 function semearEnquetes(ids: readonly string[]): void {
   /*
     Perto do fim, para caírem na primeira janela de leitura sem ninguém rolar —
