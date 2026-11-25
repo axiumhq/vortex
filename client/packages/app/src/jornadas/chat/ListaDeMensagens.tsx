@@ -14,7 +14,7 @@ import {
 import { assinarAparencia, lerAparencia } from "nucleo/store/aparencia";
 import { assinarDensidade, lerDensidade } from "nucleo/store/densidade";
 import { useChannelMessageIds } from "nucleo/store/hooks";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { chat } from "../../textos";
 import { Botao } from "../../ui/ds";
@@ -42,11 +42,18 @@ import { useEstadoDoHistorico } from "./hooks";
 import { LinhaDeMensagem } from "./LinhaDeMensagem";
 import css from "./ListaDeMensagens.module.css";
 import { MenuDaLista } from "./MenuDaLista";
-import { aoPedirFim, aoPedirSalto } from "./saltos";
+import { aoPedirFim, aoPedirSalto, consumirRetorno, guardarPosicao } from "./saltos";
 
 export interface ListaDeMensagensProps {
   canalId: string;
   servidorId: string;
+  /**
+   * Conteúdo no TOPO do scroller, antes da primeira mensagem (a mensagem que
+   * iniciou um tópico). Rola junto com a lista: entra no fluxo acima do
+   * medidor e a altura dele vira o `scrollMargin` do virtualizador, então a
+   * conta de "o que está visível" e a âncora no fim continuam exatas.
+   */
+  topo?: ReactNode;
 }
 
 /** Quanto tempo um salto espera a mensagem de destino aparecer na lista. */
@@ -139,7 +146,7 @@ function criarSinal() {
  * Leitura como posição: primeira não lida, divisor de novas mensagens e próxima
  * menção. O menu de contexto é UM, no nível da lista.
  */
-export function ListaDeMensagens({ canalId, servidorId }: ListaDeMensagensProps) {
+export function ListaDeMensagens({ canalId, servidorId, topo }: ListaDeMensagensProps) {
   count("listRenders");
   const bruto = useChannelMessageIds(canalId);
   // Linhas de sistema seguidas do mesmo tipo viram UMA ("Ana e mais 4 entraram"). As absorvidas
@@ -151,6 +158,9 @@ export function ListaDeMensagens({ canalId, servidorId }: ListaDeMensagensProps)
   const rolagem = useRef<HTMLDivElement | null>(null);
   const medidor = useRef<HTMLDivElement | null>(null);
   const temLista = ids.length > 0;
+  // Altura do `topo`: sem topo é zero, e o virtualizador se comporta como sempre.
+  const caixaDoTopo = useRef<HTMLDivElement | null>(null);
+  const [margem, setMargem] = useState(0);
 
   // O histórico, uma vez por canal: montar a lista é o sinal exato de "alguém vai ler agora".
   useEffect(() => {
@@ -193,6 +203,7 @@ export function ListaDeMensagens({ canalId, servidorId }: ListaDeMensagensProps)
     followOnAppend: true,
     scrollEndThreshold: LIMIAR_DE_FIM,
     overscan: 6,
+    scrollMargin: margem,
   });
 
   // Estava colado no fim ANTES da mudança? Guardado no scroll, não perguntado
@@ -290,6 +301,45 @@ export function ListaDeMensagens({ canalId, servidorId }: ListaDeMensagensProps)
     // abertura de um canal que nasce vazio.
   }, [canalId, temLista, longe]);
 
+  // O topo mudou de altura (a mensagem de origem chegou, a janela estreitou): a
+  // margem acompanha, e quem estava no fim continua no fim — o medidor não
+  // muda de tamanho nesse caso, então o observador dele não dispararia.
+  useEffect(() => {
+    const el = caixaDoTopo.current;
+    if (!el) return;
+    // No quadro seguinte, não dentro do callback: mexer no layout ali dentro é o
+    // "ResizeObserver loop" do navegador.
+    let quadro = 0;
+    const obs = new ResizeObserver(() => {
+      cancelAnimationFrame(quadro);
+      quadro = requestAnimationFrame(() => {
+        const altura = el.offsetHeight;
+        setMargem((antes) => (antes === altura ? antes : altura));
+        if (colado.current) virtualizer.scrollToEnd();
+      });
+    });
+    obs.observe(el);
+    return () => {
+      cancelAnimationFrame(quadro);
+      obs.disconnect();
+    };
+  }, [virtualizer, temLista]);
+
+  // Ao desmontar, a posição de leitura: a primeira linha que aparece no topo, ou
+  // "estava no fim". Só é usada se alguém pedir o retorno (ver `saltos.ts`).
+  // Lê o estado do virtualizador, não o DOM: na desmontagem o DOM já pode ter saído.
+  useEffect(
+    () => () => {
+      const medidas = virtualizer.measurementsCache;
+      if (medidas.length === 0) return;
+      const topoDaJanela = virtualizer.scrollOffset ?? 0;
+      const primeira = medidas.find((m) => m.end > topoDaJanela);
+      if (primeira === undefined) return;
+      guardarPosicao(canalId, { ancora: String(primeira.key), noFim: colado.current });
+    },
+    [canalId, virtualizer],
+  );
+
   // O CONTEÚDO cresceu: reancora quem queria estar no fim. Observa o medidor (cuja
   // altura é `getTotalSize()`), não o container: são eventos diferentes.
   useEffect(() => {
@@ -373,8 +423,16 @@ export function ListaDeMensagens({ canalId, servidorId }: ListaDeMensagensProps)
   useEffect(() => {
     if (ancorou.current || ids.length === 0) return;
     ancorou.current = true;
+    // Voltando de um tópico: a linha que estava no topo volta ao topo.
+    const retorno = consumirRetorno(canalId);
+    const i = retorno === undefined || retorno.noFim ? -1 : ids.indexOf(retorno.ancora);
+    if (i !== -1) {
+      colado.current = false;
+      virtualizer.scrollToIndex(i, { align: "start" });
+      return;
+    }
     virtualizer.scrollToEnd();
-  }, [ids.length, virtualizer]);
+  }, [ids, canalId, virtualizer]);
 
   // O realce da linha de destino: imperativo, sem estado nem assinatura por linha.
   // Uma subscrição a mais em cada uma das milhares de linhas custaria o gate para
@@ -467,9 +525,22 @@ export function ListaDeMensagens({ canalId, servidorId }: ListaDeMensagensProps)
   };
 
   if (!temLista) {
-    if (historico.inicial === "carregando") return <CarregandoHistorico />;
-    if (historico.inicial === "falhou") return <FalhaNoHistorico canalId={canalId} />;
-    return <ComecoDoCanal canalId={canalId} />;
+    const estado =
+      historico.inicial === "carregando" ? (
+        <CarregandoHistorico />
+      ) : historico.inicial === "falhou" ? (
+        <FalhaNoHistorico canalId={canalId} />
+      ) : (
+        <ComecoDoCanal canalId={canalId} />
+      );
+    if (topo === undefined) return estado;
+    // Sem mensagens o topo continua no topo, e o estado ocupa o resto.
+    return (
+      <div className={css.vazioComTopo}>
+        <div ref={caixaDoTopo}>{topo}</div>
+        <div className={css.estadoAbaixoDoTopo}>{estado}</div>
+      </div>
+    );
   }
 
   const itens = virtualizer.getVirtualItems();
@@ -543,6 +614,7 @@ export function ListaDeMensagens({ canalId, servidorId }: ListaDeMensagensProps)
           className={css.rolagem}
         >
           <div className={css.coluna}>
+            {topo !== undefined && <div ref={caixaDoTopo}>{topo}</div>}
             <div ref={medidor} className={css.medidor} style={{ blockSize: `${virtualizer.getTotalSize()}px` }}>
               {itens.map((item) => (
                 <div
@@ -550,7 +622,7 @@ export function ListaDeMensagens({ canalId, servidorId }: ListaDeMensagensProps)
                   data-index={item.index}
                   ref={virtualizer.measureElement}
                   className={css.linha}
-                  style={{ transform: `translateY(${item.start}px)` }}
+                  style={{ transform: `translateY(${item.start - margem}px)` }}
                 >
                   <LinhaDeMensagem id={String(item.key)} servidorId={servidorId} grupo={grupos.get(String(item.key))} />
                 </div>

@@ -1,5 +1,8 @@
 import {
   AppWindow as LAppWindow,
+  Archive as LArchive,
+  ArchiveRestore as LArchiveRestore,
+  MessagesSquare as LMessagesSquare,
   ArrowLeft as LArrowLeft,
   AtSign as LAtSign,
   Ban as LBan,
@@ -156,6 +159,10 @@ export const Maximizar = envolver(LMaximize2);
 export const Restaurar = envolver(LMinimize2);
 export const Minimizar = envolver(LMinus);
 export const Mensagem = envolver(LMessageSquare);
+/** Tópico: a conversa que sai de uma mensagem. */
+export const Topico = envolver(LMessagesSquare);
+export const Arquivar = envolver(LArchive);
+export const Desarquivar = envolver(LArchiveRestore);
 export const Microfone = envolver(LMic);
 export const MicrofoneDesligado = envolver(LMicOff);
 export const CompartilharTela = envolver(LMonitorUp);

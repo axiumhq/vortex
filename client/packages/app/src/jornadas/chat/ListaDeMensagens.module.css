@@ -168,3 +168,23 @@
     animation-timing-function: steps(1, end);
   }
 }
+
+/*
+  Canal sem mensagens e com conteúdo no topo (a mensagem que iniciou um tópico):
+  o topo fica em cima e o estado (carregando, vazio, falha) ocupa o resto. Rola
+  se não couber, como a lista faria.
+*/
+.vazioComTopo {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  block-size: 100%;
+  padding-block-start: var(--vx-space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.estadoAbaixoDoTopo {
+  flex: 1;
+  min-block-size: 0;
+}

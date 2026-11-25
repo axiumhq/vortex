@@ -9,9 +9,10 @@ import { responderA } from "nucleo/store/resposta";
 import { toast } from "nucleo/ui-logica/toastStore";
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
-import { chat, comum } from "../../textos";
+import { chat, comum, topico as textosDeTopico } from "../../textos";
+import { useAcaoDeTopico } from "../topicos/hooks";
 import { Botao } from "../../ui/ds";
-import { Arroba, Copiar, Desafixar, Editar, Fixar, Lixeira, NaoLida, Responder, Sorriso } from "../../ui/icones";
+import { Arroba, Copiar, Desafixar, Editar, Fixar, Lixeira, NaoLida, Responder, Sorriso, Topico } from "../../ui/icones";
 import { ConteudoDoDialogo, Dialogo, DialogoFechar } from "../../ui/primitivos/Dialogo";
 import {
   ConteudoDoMenuDeContexto,
@@ -51,6 +52,7 @@ function ConteudoDoMenu({ aoApagar }: { aoApagar: (id: string) => void }) {
   const alvo = useSyncExternalStore(assinarMenuDeMensagem, lerAlvoDoMenu);
   const id = alvo?.tipo === "mensagem" ? alvo.id : "";
   const m = useMessage(id);
+  const topico = useAcaoDeTopico(id, m?.channelId, m !== undefined && m.sendState === "sent" && !m.sistema);
   if (!m) return null;
 
   const enviada = m.sendState === "sent";
@@ -122,6 +124,16 @@ function ConteudoDoMenu({ aoApagar }: { aoApagar: (id: string) => void }) {
             <Arroba /> {chat.responderSemMencionar}
           </ItemDeMenuDeContexto>
         </>
+      )}
+      {topico !== undefined && (
+        <ItemDeMenuDeContexto
+          onSelect={() => {
+            // Depois de fechar: o diálogo de nome fica com o foco, não o gatilho do menu.
+            depoisDeFechar.current = topico.executar;
+          }}
+        >
+          <Topico /> {topico.aberto ? textosDeTopico.abrir : textosDeTopico.criar}
+        </ItemDeMenuDeContexto>
       )}
       <ItemDeMenuDeContexto
         onSelect={() => {

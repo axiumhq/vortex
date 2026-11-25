@@ -1,0 +1,193 @@
+/* A área do tópico: cabeçalho fixo em cima e o chat tomando o resto (como a do canal). */
+.area {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  min-block-size: 0;
+}
+
+.chat {
+  flex: 1;
+  min-block-size: 0;
+}
+
+/* Mesma caixa do cabeçalho de canal: entrar e sair do tópico não pode dar degrau. */
+.cabeca {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--vx-space-2);
+  min-inline-size: 0;
+  padding: var(--vx-space-3) var(--vx-space-5) var(--vx-space-3) var(--vx-space-3);
+  border-block-end: 1px solid var(--vx-border-subtle);
+}
+
+.nome {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--vx-space-2);
+  max-inline-size: 50%;
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--vx-text-1);
+  font-size: var(--vx-type-body-strong-size);
+  line-height: var(--vx-type-body-strong-line);
+  font-weight: 700;
+}
+
+.icone {
+  flex: none;
+  color: var(--vx-text-3);
+}
+
+.texto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "em #pai": cede espaço primeiro, separado do nome por um fio como o tópico do canal. */
+.pai {
+  flex: 1;
+  min-inline-size: 0;
+  margin: 0;
+  padding-inline-start: var(--vx-space-3);
+  border-inline-start: 1px solid var(--vx-border-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--vx-text-2);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+}
+
+.acoes {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--vx-space-2);
+  margin-inline-start: auto;
+}
+
+/* Estado, não ação: texto com contorno, sem cor de alerta. */
+.selo {
+  padding: 0 var(--vx-space-2);
+  border: 1px solid var(--vx-border-strong);
+  border-radius: var(--vx-radius-pill);
+  color: var(--vx-text-2);
+  font-size: var(--vx-type-badge-size);
+  line-height: var(--vx-type-badge-line);
+  font-weight: var(--vx-type-badge-weight);
+  letter-spacing: var(--vx-type-badge-tracking);
+}
+
+/* A mensagem de origem: card no topo do scroller, com o recuo das linhas. */
+.raiz {
+  margin: 0 var(--vx-space-4) var(--vx-space-4);
+  padding: var(--vx-space-3) var(--vx-space-4);
+  border: 1px solid var(--vx-border-subtle);
+  border-radius: var(--vx-radius-md);
+  background: var(--vx-surface-glass);
+}
+
+.origem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--vx-space-3);
+  min-inline-size: 0;
+}
+
+.conteudoDaOrigem {
+  flex: 1;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.autoria {
+  display: flex;
+  align-items: baseline;
+  gap: var(--vx-space-2);
+  margin: 0;
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+}
+
+.autor {
+  color: var(--vx-text-1);
+  font-weight: 700;
+}
+
+.iniciou {
+  color: var(--vx-text-3);
+}
+
+.textoCru {
+  margin: 0;
+  color: var(--vx-text-1);
+  font-size: var(--vx-type-body-size);
+  line-height: var(--vx-type-body-line);
+  white-space: pre-wrap;
+}
+
+.apagada {
+  margin: 0;
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+  font-style: italic;
+}
+
+/* Acima do composer, na mesma coluna: diz o que responder faz. */
+.avisoDeArquivado {
+  margin: 0 0 var(--vx-space-2);
+  color: var(--vx-text-2);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+}
+
+/* Diálogo de nome: o mesmo formulário dos outros diálogos de criar. */
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-3);
+}
+
+.rotulo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-1);
+  color: var(--vx-text-2);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+}
+
+.campo {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: 40px;
+  padding: 0 var(--vx-space-3);
+  border: 1px solid var(--vx-border-strong);
+  border-radius: var(--vx-radius-sm);
+  background: var(--vx-surface-solid);
+  color: var(--vx-text-1);
+  font: inherit;
+}
+
+.campo:focus-visible {
+  outline: 2px solid var(--vx-focus-ring);
+  outline-offset: 2px;
+}
+
+.erro {
+  margin: 0;
+  color: var(--vx-danger);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+}
+
+.rodapeDoDialogo {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--vx-space-2);
+}
