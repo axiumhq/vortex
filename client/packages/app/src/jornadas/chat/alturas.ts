@@ -81,6 +81,13 @@ export function alturaDaEnquete(respostas: number): number {
   return ALTURA_DA_ENQUETE.fixa + ALTURA_DA_ENQUETE.porResposta * respostas;
 }
 
+/**
+ * A linha "N respostas" do tópico sob a mensagem: botão de 24px mais o respiro de cima.
+ * FIXA — não depende da contagem, do nome (cortado com reticências) nem de a contagem
+ * já ter chegado. `ResumoDoTopico.browser.test.tsx` compara esta constante com a caixa real.
+ */
+export const ALTURA_DO_RESUMO_DE_TOPICO = 32;
+
 /** A linha de estado de envio ("Enviando…", "Não foi enviada"). */
 export const ALTURA_DO_ESTADO_DE_ENVIO = 22;
 

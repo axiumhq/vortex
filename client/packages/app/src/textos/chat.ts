@@ -224,6 +224,15 @@ export const chat = {
     },
   },
 
+  /* A linha de respostas sob a mensagem que abriu um tópico */
+  topico: {
+    respostas: (n: number) => plural(n, "resposta", "respostas"),
+    /** A contagem ainda não chegou: a mesma caixa, sem afirmar um número. */
+    semContagem: "Tópico",
+    /** O nome acessível do botão: a ação mais o que a linha mostra. */
+    abrir: (descricao: string) => `Abrir o tópico: ${descricao}`,
+  },
+
   /* Seletor de emoji */
   emoji: {
     maisReacoes: "Mais reações",
