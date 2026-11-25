@@ -18,7 +18,7 @@ import { EmbedsDaMensagem } from "./EmbedsDaMensagem";
 import { EditorInline } from "./EditorInline";
 import { EnqueteDaMensagem } from "./EnqueteDaMensagem";
 import { FraseDeSistema } from "./FraseDeSistema";
-import { useAcaoDeTopico } from "../topicos/hooks";
+import { useAcaoDeTopico } from "../topicos/acaoDeTopico";
 import { useEditandoEsta } from "./hooks";
 import linha from "./Linha.module.css";
 import css from "./ListaDeMensagens.module.css";

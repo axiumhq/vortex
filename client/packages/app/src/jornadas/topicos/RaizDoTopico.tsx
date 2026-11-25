@@ -1,9 +1,11 @@
+import { mensagensApagadas } from "nucleo/sdk/apagadas";
 import { chaveDeMembro } from "nucleo/sdk/domain";
 import { carregarTopicosDoCanal } from "nucleo/sdk/topicos";
 import { useForum, useMessage, useNomeDoMembro, useTopico } from "nucleo/store/hooks";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
-import { chat, topico as textos } from "../../textos";
+import { chat } from "../../textos";
+import { topico as textos } from "../../textos/topico";
 import { AvatarDoAutor } from "../chat/AvatarDoAutor";
 import { CorpoDaMensagem } from "../chat/CorpoDaMensagem";
 import css from "./Topico.module.css";
@@ -17,7 +19,9 @@ import css from "./Topico.module.css";
  * A origem mora no canal PAI. Vem do store de mensagens quando já foi
  * carregada (formatada como na linha) e, senão, da listagem de tópicos do pai,
  * que traz o texto cru. "Apagada" só é dito quando a listagem RESPONDEU e não
- * a trouxe: sem rede, não saber não vira afirmação.
+ * a trouxe: sem rede, não saber não vira afirmação. Apagada com o tópico
+ * aberto, troca na hora: o snapshot da mensagem fica no store depois da
+ * exclusão, então quem diz que ela sumiu é `mensagensApagadas`.
  *
  * Só tópico de MENSAGEM tem card. Num post de fórum a abertura é a primeira
  * mensagem de dentro, e o card a repetiria logo acima dela.
@@ -26,6 +30,10 @@ export function RaizDoTopico({ topicoId, servidorId }: { topicoId: string; servi
   const t = useTopico(topicoId);
   const forum = useForum(t?.paiId ?? "");
   const origem = useMessage(t?.aberturaId ?? "");
+  const idDaOrigem = t?.aberturaId ?? "";
+  const apagadaAgora = useSyncExternalStore(mensagensApagadas.subscriber(idDaOrigem), () =>
+    mensagensApagadas.getSnapshot(idDaOrigem),
+  ) === true;
   const autorId = origem?.authorId ?? t?.abertura?.autorId ?? t?.donoId;
   const nome = useNomeDoMembro(chaveDeMembro(servidorId, autorId ?? "")) ?? chat.autorDesconhecido;
   const paiId = t?.paiId;
@@ -46,7 +54,8 @@ export function RaizDoTopico({ topicoId, servidorId }: { topicoId: string; servi
   if (!t || forum !== null) return null;
 
   const listou = listagem?.paiId === t.paiId && listagem.ok;
-  const apagada = t.aberturaId === undefined || (origem === undefined && t.abertura === undefined && listou);
+  const apagada =
+    t.aberturaId === undefined || apagadaAgora || (origem === undefined && t.abertura === undefined && listou);
 
   return (
     <article className={css.raiz} aria-label={textos.origem.rotulo} data-raiz-do-topico="">

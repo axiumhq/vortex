@@ -14,7 +14,8 @@ import { page, userEvent } from "vitest/browser";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { quadros } from "../../testes/esperas";
-import { chat, topico } from "../../textos";
+import { chat } from "../../textos";
+import { topico } from "../../textos/topico";
 import { desmontar, montar, pegar } from "../../ui/ds/montar";
 import { pedirSalto } from "../chat/saltos";
 import { ShellDasSalas } from "../salas/ShellDasSalas";
@@ -385,5 +386,57 @@ describe("seguir e arquivar", () => {
     await quadros(2);
     expect(page.getByRole("button", { name: topico.cabecalho.arquivar }).query()).toBeNull();
     expect(page.getByRole("button", { name: topico.cabecalho.reabrir }).query()).toBeNull();
+  });
+});
+
+/* Por último: apagar tira a mensagem do canal e desloca `ids()` para os testes seguintes. */
+describe("origem apagada com o tópico aberto", () => {
+  it("o card vira 'mensagem apagada' na hora, e o que se lia não salta", async () => {
+    await abrirApp();
+    const origem = ids()[45]!;
+    const topicoId = ulidDoInstante(Date.now() - 1_000)!;
+    const canal = {
+      _id: topicoId,
+      channel_type: "TextChannel",
+      server: SERVER_ID,
+      name: "tópico que perde a origem",
+      thread: { parent: CHANNEL_ID, owner: usuarioLocalId(), message: origem, archived: false, tags: [], followers: [] },
+    };
+    client.channels.getOrCreate(topicoId, canal as never);
+    anotarCanais([canal]);
+    const respostas: string[] = [];
+    for (let i = 0; i < 30; i++) {
+      const id = ulidDoInstante(Date.now() - (30 - i) * 60_000)!;
+      client.messages.getOrCreate(
+        id,
+        { _id: id, channel: topicoId, author: usuarioLocalId(), content: `resposta ${String(i)}` } as never,
+        false,
+      );
+      respostas.push(id);
+    }
+    seedChannel(topicoId, respostas);
+    irPara(SERVER_ID, topicoId);
+
+    await expect.poll(() => log().querySelector("[data-raiz-do-topico]")?.textContent ?? "").toContain(topico.origem.iniciou);
+    const card = () => log().querySelector<HTMLElement>("[data-raiz-do-topico]")!;
+    // Lendo no meio (o gesto de gente descola do fim), com o card acima da janela.
+    log().dispatchEvent(new WheelEvent("wheel", { deltaY: -400, bubbles: true }));
+    log().scrollTop = card().offsetHeight + 300;
+    await quadros(4);
+    const visiveis = [...log().querySelectorAll<HTMLElement>("[data-menu-mensagem]")].filter((el) => {
+      const r = el.getBoundingClientRect();
+      const j = log().getBoundingClientRect();
+      return r.top > j.top + 20 && r.bottom < j.bottom - 20;
+    });
+    const alvo = visiveis[0]!;
+    const topoAntes = alvo.getBoundingClientRect().top;
+    const alturaAntes = card().offsetHeight;
+
+    client.emit("messageDelete", client.messages.get(origem)!);
+
+    await expect.element(page.getByText(topico.origem.apagada)).toBeVisible();
+    expect(card().offsetHeight).toBeLessThan(alturaAntes);
+    await quadros(4);
+    expect(Math.abs(alvo.getBoundingClientRect().top - topoAntes)).toBeLessThan(2);
   });
 });

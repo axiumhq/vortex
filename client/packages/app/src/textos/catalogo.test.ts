@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { catalogo } from "./index";
+/* Fora do índice de propósito (não disputa a linha de export com outra jornada): entra na varredura aqui. */
+import { topico } from "./topico";
 
 type Entrada = { caminho: string; chave: string; texto: string };
 
@@ -21,7 +23,7 @@ function coletar(no: unknown, caminho: string, chave: string, saida: Entrada[]) 
 }
 
 const entradas: Entrada[] = [];
-coletar(catalogo, "textos", "", entradas);
+coletar({ ...catalogo, topico }, "textos", "", entradas);
 
 /** Termos internos que nunca devem chegar a quem usa o produto. */
 const TERMOS_PROIBIDOS = [

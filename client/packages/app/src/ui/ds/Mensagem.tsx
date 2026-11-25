@@ -1,6 +1,7 @@
 import { memo, type MouseEvent, type ReactNode } from "react";
 
-import { chat, ds, topico as textosDeTopico } from "../../textos";
+import { chat, ds } from "../../textos";
+import { topico as textosDeTopico } from "../../textos/topico";
 import { Imagem, MaisHorizontal, Responder, Sorriso, Topico } from "../icones";
 import { juntar } from "../juntar";
 import { Avatar } from "./Avatar";

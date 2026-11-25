@@ -2,7 +2,8 @@ import { criarTopico, nomeDeTopicoDe } from "nucleo/sdk/topicos";
 import { useMessage } from "nucleo/store/hooks";
 import { useState, useSyncExternalStore, type FormEvent } from "react";
 
-import { comum, topico } from "../../textos";
+import { comum } from "../../textos";
+import { topico } from "../../textos/topico";
 import { Botao } from "../../ui/ds";
 import { ConteudoDoDialogo, Dialogo } from "../../ui/primitivos/Dialogo";
 import {

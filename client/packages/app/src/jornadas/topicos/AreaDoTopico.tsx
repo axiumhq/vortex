@@ -2,7 +2,7 @@ import { carregarTopicosDoCanal, podeAbrirTopico } from "nucleo/sdk/topicos";
 import { useTemTopicos, useTopico } from "nucleo/store/hooks";
 import { useEffect } from "react";
 
-import { topico as textos } from "../../textos";
+import { topico as textos } from "../../textos/topico";
 import { useAtalhoDeBusca } from "../busca/hooks";
 import { AreaDeChat } from "../chat/AreaDeChat";
 import { AreaDoCanal } from "../chat/CabecalhoDoCanal";

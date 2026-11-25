@@ -9,8 +9,9 @@ import { responderA } from "nucleo/store/resposta";
 import { toast } from "nucleo/ui-logica/toastStore";
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
-import { chat, comum, topico as textosDeTopico } from "../../textos";
-import { useAcaoDeTopico } from "../topicos/hooks";
+import { chat, comum } from "../../textos";
+import { topico as textosDeTopico } from "../../textos/topico";
+import { useAcaoDeTopico } from "../topicos/acaoDeTopico";
 import { Botao } from "../../ui/ds";
 import { Arroba, Copiar, Desafixar, Editar, Fixar, Lixeira, NaoLida, Responder, Sorriso, Topico } from "../../ui/icones";
 import { ConteudoDoDialogo, Dialogo, DialogoFechar } from "../../ui/primitivos/Dialogo";

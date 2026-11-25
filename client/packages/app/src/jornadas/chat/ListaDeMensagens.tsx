@@ -310,7 +310,15 @@ export function ListaDeMensagens({ canalId, servidorId, topo }: ListaDeMensagens
     // No quadro seguinte, não dentro do callback: mexer no layout ali dentro é o
     // "ResizeObserver loop" do navegador.
     let quadro = 0;
+    let anterior = el.offsetHeight;
     const obs = new ResizeObserver(() => {
+      // O topo mudou de altura ACIMA do que se lê (a origem apagada vira uma linha):
+      // a rolagem anda o mesmo tanto, antes de pintar, e o texto à vista não salta.
+      // No fim, quem segura a posição é a âncora (abaixo).
+      const delta = el.offsetHeight - anterior;
+      anterior = el.offsetHeight;
+      const raiz = rolagem.current;
+      if (delta !== 0 && !colado.current && raiz !== null && raiz.scrollTop > 0) raiz.scrollTop += delta;
       cancelAnimationFrame(quadro);
       quadro = requestAnimationFrame(() => {
         const altura = el.offsetHeight;

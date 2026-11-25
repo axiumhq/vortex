@@ -3,7 +3,7 @@ import { pode } from "nucleo/sdk/permissoes";
 import { arquivarTopico, seguirTopico } from "nucleo/sdk/topicos";
 import { useChannel, useTopico } from "nucleo/store/hooks";
 
-import { topico as textos } from "../../textos";
+import { topico as textos } from "../../textos/topico";
 import { Botao } from "../../ui/ds";
 import { Arquivar, Desarquivar, SetaEsquerda, Topico } from "../../ui/icones";
 import { voltarAoPai } from "./acoes";
