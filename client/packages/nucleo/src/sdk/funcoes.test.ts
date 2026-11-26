@@ -22,6 +22,7 @@ import {
   definirFuncoesDoArnes,
   servidorTemEnquetes,
   servidorTemFuncao,
+  servidorTemTopicos,
 } from "./funcoes";
 
 beforeEach(() => {
@@ -62,6 +63,23 @@ describe("servidorTemFuncao / servidorTemEnquetes", () => {
     expect(servidorTemEnquetes()).toBe(true);
     definirFuncoesDoArnes(undefined);
     expect(servidorTemEnquetes()).toBe(false);
+  });
+});
+
+describe("servidorTemTopicos", () => {
+  it("ausente -> false; só 'threads' liga, e é independente de 'polls'", () => {
+    expect(servidorTemTopicos()).toBe(false);
+    estado.client.configuration = { features: { vortex: ["polls"] } };
+    expect(servidorTemTopicos()).toBe(false);
+    estado.client.configuration = { features: { vortex: ["threads"] } };
+    expect(servidorTemTopicos()).toBe(true);
+    expect(servidorTemEnquetes()).toBe(false);
+  });
+
+  it("o arnês liga as duas", () => {
+    definirFuncoesDoArnes(["polls", "threads"]);
+    expect(servidorTemTopicos()).toBe(true);
+    expect(servidorTemEnquetes()).toBe(true);
   });
 });
 
