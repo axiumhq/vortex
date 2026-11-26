@@ -622,8 +622,9 @@ impl Channel {
     /// the ones that do find it by `thread.parent`.
     ///
     /// Permission overrides are copied from the parent at creation, so a thread
-    /// of a private channel is exactly as private. Later changes to the parent
-    /// are not propagated.
+    /// of a private channel is exactly as private. Later changes to the
+    /// parent's overrides are copied again by the permission routes of `delta`
+    /// (`util::overrides::propagate_to_threads`).
     pub async fn create_thread(
         db: &Database,
         parent: &Channel,

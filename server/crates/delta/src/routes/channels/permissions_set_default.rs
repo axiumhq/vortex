@@ -8,7 +8,7 @@ use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
 use rocket::{serde::json::Json, State};
 
-use crate::util::audit_log_reason::AuditLogReason;
+use crate::util::{audit_log_reason::AuditLogReason, overrides::propagate_to_threads};
 
 /// # Set Default Permission
 ///
@@ -87,6 +87,8 @@ pub async fn set_default_channel_permissions(
         _ => return Err(create_error!(InvalidOperation)),
     }
 
+    propagate_to_threads(db, &channel).await?;
+
     let server = match channel.server() {
         Some(server_id) => Some(Reference::from_unchecked(server_id).as_server(db).await?),
         None => None,
@@ -95,4 +97,107 @@ pub async fn set_default_channel_permissions(
     sync_voice_permissions(db, voice_client, &channel, server.as_ref(), None).await?;
 
     Ok(Json(channel.into()))
+}
+
+#[cfg(test)]
+mod test {
+    use crate::util::test::TestHarness;
+    use revolt_database::{events::client::EventV1, Channel, Member};
+    use revolt_models::v0;
+    use revolt_permissions::ChannelPermission;
+    use rocket::http::{ContentType, Header, Status};
+
+    /// Segurança: o canal que vira privado leva os tópicos junto. Sem a cópia,
+    /// o tópico guardaria as sobreposições da criação e continuaria aberto
+    /// para quem perdeu o acesso ao pai.
+    #[rocket::async_test]
+    async fn canal_privado_fecha_os_topicos() {
+        let mut harness = TestHarness::new().await;
+        let (_, owner_session, owner) = harness.new_user().await;
+        let (_, member_session, member) = harness.new_user().await;
+        let (server, channels) = harness.new_server(&owner).await;
+        Member::create(&harness.db, &server, &member, None)
+            .await
+            .expect("`Member`");
+
+        let pai = &channels[0];
+        let topico = Channel::create_thread(
+            &harness.db,
+            pai,
+            &owner.id,
+            v0::DataCreateThread {
+                name: "Tópico".to_string(),
+                message: None,
+                tags: vec![],
+            },
+        )
+        .await
+        .expect("`Channel`");
+
+        assert_eq!(
+            harness.list_threads(&member_session, &server.id, false).await,
+            vec![topico.id().to_string()]
+        );
+
+        let response = harness
+            .client
+            .put(format!("/channels/{}/permissions/default", pai.id()))
+            .header(Header::new("x-session-token", owner_session.token.to_string()))
+            .header(ContentType::JSON)
+            .body(
+                json!({
+                    "permissions": {
+                        "allow": 0,
+                        "deny": ChannelPermission::ViewChannel as u64
+                    }
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Ok);
+        drop(response);
+
+        // A cópia acontece antes da resposta: sem ela, o membro ainda vê.
+        let id = topico.id().to_string();
+        assert!(harness
+            .list_threads(&member_session, &server.id, false)
+            .await
+            .is_empty());
+        assert_eq!(
+            harness.list_threads(&owner_session, &server.id, false).await,
+            vec![id.clone()]
+        );
+
+        let response = harness
+            .client
+            .get(format!("/channels/{id}/messages"))
+            .header(Header::new("x-session-token", member_session.token.to_string()))
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Forbidden);
+        drop(response);
+
+        let response = harness
+            .client
+            .post(format!("/channels/{id}/messages"))
+            .header(Header::new("x-session-token", member_session.token.to_string()))
+            .header(ContentType::JSON)
+            .body(json!({ "content": "ainda entro?" }).to_string())
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Forbidden);
+        drop(response);
+
+        // Os clientes abertos ficam sabendo pelo `ChannelUpdate` do tópico.
+        harness
+            .wait_for_event(&server.id, |event| {
+                matches!(
+                    event,
+                    EventV1::ChannelUpdate { id: alvo, data, .. }
+                        if alvo == &id && data.default_permissions.is_some()
+                )
+            })
+            .await;
+    }
 }
