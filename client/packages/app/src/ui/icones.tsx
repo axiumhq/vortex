@@ -21,6 +21,7 @@ import {
   File as LFile,
   Eye as LEye,
   MessageSquareDot as LMessageSquareDot,
+  MessagesSquare as LMessagesSquare,
   EyeOff as LEyeOff,
   Crown as LCrown,
   Ellipsis as LEllipsis,
@@ -134,6 +135,7 @@ export const Baixar = envolver(LDownload);
 export const Arquivo = envolver(LFile);
 export const Fixar = envolver(LPin);
 export const Desafixar = envolver(LPinOff);
+export const Topicos = envolver(LMessagesSquare);
 export const Alerta = envolver(LCircleAlert);
 export const Confirmado = envolver(LCircleCheck);
 export const Email = envolver(LMail);
