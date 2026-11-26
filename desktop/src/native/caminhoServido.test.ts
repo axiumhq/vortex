@@ -10,7 +10,8 @@ const RAIZ = resolve("/tmp/casca/dist-casca");
 function servido(url: string | undefined): string | undefined {
   const caminho = caminhoDoPedido(url);
   if (caminho === undefined) return undefined;
-  const arquivo = resolve(RAIZ, `.${sep}${caminho}`);
+  let arquivo = resolve(RAIZ, `.${sep}${caminho}`);
+  if (arquivo === RAIZ) arquivo = join(RAIZ, "index.html");
   return dentroDe(RAIZ, arquivo) ? arquivo : undefined;
 }
 
@@ -20,9 +21,10 @@ describe("caminho servido pela casca", () => {
     assert.equal(servido("/assets/app.js?v=1"), join(RAIZ, "assets", "app.js"));
   });
 
-  it("a raiz é a própria pasta", () => {
-    assert.equal(servido("/"), RAIZ);
-    assert.equal(servido(undefined), RAIZ);
+  it("a raiz serve o index.html, e a própria pasta não passa pela guarda", () => {
+    assert.equal(servido("/"), join(RAIZ, "index.html"));
+    assert.equal(servido(undefined), join(RAIZ, "index.html"));
+    assert.equal(dentroDe(RAIZ, RAIZ), false);
   });
 
   it("recusa subir para fora da pasta, inclusive codificado", () => {

@@ -22,14 +22,16 @@ export function caminhoDoPedido(url) {
 }
 
 /**
- * `arquivo` (já passado por `resolve`) é a própria `raiz` ou está abaixo dela.
+ * `arquivo` (já passado por `resolve`) está ABAIXO de `raiz`. A própria raiz
+ * não conta: ela é uma pasta, e quem chama a troca pelo `index.html` antes.
  *
  * ⚠ **Prefixo COM separador.** `startsWith(raiz)` sozinho aceitaria
- * `dist-outra/` como se fosse `dist/`.
+ * `dist-outra/` como se fosse `dist/`. E a guarda é UMA comparação, sem
+ * `||`: com um segundo ramo o CodeQL deixa de reconhecê-la como guarda.
  *
  * @param {string} raiz absoluta e resolvida
  * @param {string} arquivo absoluto e resolvido
  */
 export function dentroDe(raiz, arquivo) {
-  return arquivo === raiz || arquivo.startsWith(raiz + sep);
+  return arquivo.startsWith(raiz + sep);
 }

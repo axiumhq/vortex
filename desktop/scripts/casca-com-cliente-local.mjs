@@ -118,6 +118,7 @@ const servidor = createServer((req, res) => {
   }
   /* `resolve` e a guarda AQUI, junto do `readFileSync`: é o ponto que precisa dela. */
   let arquivo = resolve(RAIZ, `.${sep}${caminho}`);
+  if (arquivo === RAIZ) arquivo = join(RAIZ, "index.html");
   if (!dentroDe(RAIZ, arquivo)) {
     res.writeHead(403).end();
     return;
