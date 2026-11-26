@@ -22,6 +22,7 @@ import { useEditandoEsta } from "./hooks";
 import linha from "./Linha.module.css";
 import css from "./ListaDeMensagens.module.css";
 import { abrirMenuDaMensagem } from "./MenuDaLista";
+import { ResumoDoTopico } from "./ResumoDoTopico";
 import { RodapeDaMensagem, temRodape } from "./RodapeDaMensagem";
 
 export interface LinhaDeMensagemProps {
@@ -117,6 +118,7 @@ function LinhaBase({ id, servidorId, grupo }: LinhaDeMensagemProps) {
                 {m.anexos.length > 0 && <AnexosDaMensagem anexos={m.anexos} mensagemId={id} />}
                 {previas && m.embeds.length > 0 && <EmbedsDaMensagem embeds={m.embeds} servidorId={servidorId} />}
                 {temRodape(m) && <RodapeDaMensagem m={m} podeReagir={podeReagir} />}
+                <ResumoDoTopico messageId={id} />
               </>
             }
           >
