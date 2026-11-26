@@ -218,6 +218,46 @@ export const sessao = {
     voltar: "Ir para a entrada",
   },
 
+  download: {
+    titulo: "Vortex no seu computador",
+    subtitulo:
+      "A mesma interface da web, com atalhos globais de voz, áudio por aplicativo e sobreposição enquanto você joga.",
+    baixar: "Baixar",
+    baixarPara: (sistema: string) => `Baixar para ${sistema}`,
+    todasAsVersoes: "Ver todas as versões",
+    tituloPacotes: "Escolha o pacote",
+    subtituloPacotes: "Windows e Linux",
+    sinalSeuSistema: "Seu sistema",
+    windows: "Windows",
+    instaladorWindows: "Instalador .exe",
+    instrucaoWindows:
+      "Execute o instalador para começar. Se o SmartScreen avisar na primeira vez, confirme a execução — o Vortex atualiza sozinho depois.",
+    debian: "Ubuntu e Debian",
+    pacoteDebian: "Pacote .deb",
+    arch: "Arch Linux",
+    pacoteArch: "Pacote .pkg.tar.zst",
+    linux: "Outras distribuições Linux",
+    pacoteLinux: "Arquivo .zip",
+    instalarNoLinux: "Instalar em um comando",
+    instrucaoLinuxUnica:
+      "Baixa o pacote certo para sua distribuição com verificação SHA-256, instala e também atualiza depois. Se preferir, baixe o arquivo acima manualmente.",
+    comoInstalar: "Como instalar",
+    copiar: "Copiar",
+    copiado: "Copiado",
+    copiarComando: "Copiar comando de instalação",
+    recursoAtalhosTitulo: "Atalhos globais de voz",
+    recursoAtalhosTexto: "Fale ou silencie o microfone mesmo com outra janela em foco.",
+    recursoAudioTitulo: "Áudio por aplicativo",
+    recursoAudioTexto: "Compartilhe o som apenas do jogo ou da janela que você escolher.",
+    recursoSobreposicaoTitulo: "Sobreposição em jogo",
+    recursoSobreposicaoTexto: "Veja quem está falando sem sair da tela cheia.",
+    recursoBandejaTitulo: "Sempre à mão",
+    recursoBandejaTexto: "Fica na bandeja do sistema e pode abrir junto com o computador.",
+    fonte: "Arquivos oficiais das versões do Vortex no GitHub.",
+    macos: "O aplicativo para macOS ainda não está disponível.",
+    voltar: "Voltar ao Vortex",
+  },
+
   qr: {
     titulo: "Aponte um aparelho conectado",
     instrucao:

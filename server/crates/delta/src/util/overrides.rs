@@ -148,3 +148,40 @@ pub async fn apply_overrides(
 
     Ok((before, partial))
 }
+
+/// Vortex: copia as sobreposições do canal para os tópicos dele.
+///
+/// O tópico nasce com a cópia das sobreposições do pai (`Channel::create_thread`)
+/// e o cálculo de permissão só lê o próprio canal — então, sem esta cópia, um
+/// canal que vira privado deixaria os tópicos dele abertos para quem perdeu o
+/// acesso. Cada tópico alterado emite o próprio `ChannelUpdate`.
+///
+/// Canal que não é de servidor, ou que já é tópico, não tem tópicos: não faz
+/// nada.
+pub async fn propagate_to_threads(db: &Database, parent: &Channel) -> Result<()> {
+    let Channel::TextChannel {
+        id,
+        server,
+        default_permissions,
+        role_permissions,
+        thread: None,
+        ..
+    } = parent
+    else {
+        return Ok(());
+    };
+
+    let threads = db
+        .fetch_threads(std::slice::from_ref(server), Some(id), None)
+        .await?;
+
+    for mut thread in threads {
+        if has_overrides(&thread, *default_permissions, role_permissions) {
+            continue;
+        }
+
+        apply_overrides(db, &mut thread, *default_permissions, role_permissions).await?;
+    }
+
+    Ok(())
+}

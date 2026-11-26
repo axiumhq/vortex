@@ -213,7 +213,9 @@ describe("chegada tardia do embed", () => {
     await prontaNoFim();
     // Sobe até o meio, com gesto de verdade para a lista soltar o fim, e só conta como
     // "lendo" quando FICA lá: sob carga a âncora ainda age e puxa de volta ao fim, e aí
-    // sobe de novo. Pronto = longe do fim e parada por várias leituras seguidas.
+    // sobe de novo. Pronto = longe do fim, com ao menos duas linhas inteiras na tela e
+    // parada por várias leituras seguidas (uma linha muito alta com embed + resumo de
+    // tópico pode ocupar quase toda a caixa de 600px e deixar só uma linha inteira).
     let anterior = "";
     let iguais = 0;
     await expect
@@ -227,6 +229,11 @@ describe("chegada tardia do embed", () => {
           const agora = `${String(log().scrollTop)}|${String(log().scrollHeight)}`;
           iguais = agora === anterior ? iguais + 1 : 0;
           anterior = agora;
+          if (iguais >= 2 && linhasInteiras().length < 2 && log().scrollTop > 0) {
+            await subirComGesto();
+            iguais = 0;
+            return 0;
+          }
           return iguais;
         },
         { timeout: 10_000, interval: 80 },
@@ -235,10 +242,15 @@ describe("chegada tardia do embed", () => {
     expect(distanciaDoFim()).toBeGreaterThan(800);
   }
 
+  function linhasInteiras() {
+    const caixa = log().getBoundingClientRect();
+    return linhas().filter((l) => topo(l) >= caixa.top && l.getBoundingClientRect().bottom <= caixa.bottom);
+  }
+
   /** Linha de referência longe das bordas: a do meio das inteiras na tela (a primeira se couberem só duas). */
   function referencia() {
     const caixa = log().getBoundingClientRect();
-    const inteiras = linhas().filter((l) => topo(l) >= caixa.top && l.getBoundingClientRect().bottom <= caixa.bottom);
+    const inteiras = linhasInteiras();
     expect(inteiras.length).toBeGreaterThan(1);
     // Com poucas linhas altas na tela, a do meio seria a última: fica a primeira.
     return { caixa, inteiras, ancora: inteiras[inteiras.length > 2 ? Math.floor((inteiras.length - 1) / 2) : 0]! };
