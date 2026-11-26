@@ -130,7 +130,9 @@ tmp=$(mktemp -d)
 estagio=""
 limpar() {
   rm -rf "$tmp"
-  [ -n "$estagio" ] && rm -rf "$estagio"
+  if [ -n "$estagio" ]; then
+    rm -rf "$estagio"
+  fi
 }
 trap limpar EXIT INT TERM HUP
 
