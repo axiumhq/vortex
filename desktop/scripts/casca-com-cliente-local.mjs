@@ -22,8 +22,10 @@
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { extname, join, normalize, resolve } from "node:path";
+import { extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { arquivoServido } from "./caminhoServido.mjs";
 
 const AQUI = fileURLToPath(new URL(".", import.meta.url));
 const CASCA = resolve(AQUI, "..");
@@ -108,17 +110,15 @@ function ehRotaDaSpa(caminho) {
 }
 
 const servidor = createServer((req, res) => {
-  const caminho = decodeURIComponent((req.url ?? "/").split("?")[0]);
-
-  /* `normalize` antes de juntar: sem isso `/../` sai da pasta servida. */
-  const pedido = join(RAIZ, normalize(caminho));
-  const dentro = pedido.startsWith(RAIZ);
-
-  let arquivo = pedido;
-  if (!dentro) {
+  /* Fora da pasta servida, ou URL malformada: 403, e o servidor segue de pé. */
+  const pedido = arquivoServido(RAIZ, req.url);
+  if (pedido === undefined) {
     res.writeHead(403).end();
     return;
   }
+  const { caminho } = pedido;
+
+  let arquivo = pedido.arquivo;
   if (!existsSync(arquivo) || statSync(arquivo).isDirectory()) {
     if (!ehRotaDaSpa(caminho)) {
       res.writeHead(404, { "Content-Type": "text/plain" });
