@@ -1,8 +1,11 @@
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
-use futures::StreamExt;
+use fred::clients::SubscriberClient;
+use fred::interfaces::{ClientLike, EventInterface, PubsubInterface};
+use fred::types::{ReconnectPolicy, RedisConfig};
 use rand::RngExt;
-use redis_kiss::redis::aio::PubSub;
 use revolt_database::util::email::normalise_email;
 use revolt_database::util::password::hash_password;
 use revolt_database::{
@@ -16,13 +19,22 @@ use revolt_permissions::OverrideField;
 use rocket::http::Header;
 use rocket::local::asynchronous::{Client, LocalRequest, LocalResponse};
 use rocket::tokio;
+use rocket::tokio::sync::{broadcast::error::RecvError, mpsc};
 use serde::{Deserialize, Serialize};
+
+/// Quanto `wait_for_event` espera antes de reprovar o teste.
+const ESPERA_POR_EVENTO: Duration = Duration::from_secs(10);
 
 pub struct TestHarness {
     pub client: Client,
     pub db: Database,
     pub amqp: AMQP,
-    sub: PubSub,
+    /// Mantido vivo pelo tempo do harness: soltá-lo encerra a assinatura.
+    _sub: SubscriberClient,
+    /// Eventos já decodificados, drenados do Redis por uma tarefa própria.
+    eventos: mpsc::UnboundedReceiver<(String, EventV1)>,
+    /// Mensagens que o canal de broadcast do `fred` descartou por atraso.
+    perdidos: Arc<AtomicU64>,
     event_buffer: Vec<(String, EventV1)>,
 }
 
@@ -32,11 +44,7 @@ impl TestHarness {
             .await
             .expect("valid rocket instance");
 
-        let mut sub = redis_kiss::open_pubsub_connection()
-            .await
-            .expect("`PubSub`");
-
-        sub.psubscribe("*").await.unwrap();
+        let (sub, eventos, perdidos) = TestHarness::assinar_eventos().await;
 
         let db = client
             .rocket()
@@ -50,9 +58,109 @@ impl TestHarness {
             client,
             db,
             amqp,
-            sub,
+            _sub: sub,
+            eventos,
+            perdidos,
             event_buffer: vec![],
         }
+    }
+
+    /// Assina todos os tópicos (`*`) ANTES de devolver, para que nenhum
+    /// evento gerado pelo teste chegue antes da assinatura.
+    ///
+    /// Antes isto era um `PubSub` do `redis` 0.23 lido com `on_message()`, que
+    /// monta um leitor NOVO a cada chamada: os bytes que o leitor anterior (ou
+    /// a resposta do `PSUBSCRIBE`) já tinha tirado do socket se perdiam, o
+    /// leitor seguinte começava no meio de uma mensagem, o parser falhava e o
+    /// stream terminava — o `unreachable!()` intermitente do CI. Com o tráfego
+    /// de todos os testes paralelos chegando por `*`, a chance de um corte no
+    /// meio da mensagem era alta.
+    ///
+    /// Agora é o `SubscriberClient` do `fred` (o mesmo do bonfire), com
+    /// reconexão e reassinatura automáticas, e uma tarefa que drena as
+    /// mensagens continuamente para um canal sem limite — o socket nunca fica
+    /// sem leitura enquanto o teste faz requisições.
+    async fn assinar_eventos() -> (
+        SubscriberClient,
+        mpsc::UnboundedReceiver<(String, EventV1)>,
+        Arc<AtomicU64>,
+    ) {
+        let config = RedisConfig::from_url(&redis_kiss::REDIS_URI).expect("`REDIS_URI`");
+        let mut builder = fred::types::Builder::from_config(config);
+        builder.set_policy(ReconnectPolicy::new_exponential(0, 100, 2_000, 2));
+        builder.with_performance_config(|c| c.broadcast_channel_capacity = 65_536);
+        let sub = builder
+            .build_subscriber_client()
+            .expect("`SubscriberClient`");
+        sub.init().await.expect("conexão de pub/sub com o Redis");
+        sub.manage_subscriptions();
+
+        // O receptor nasce antes do `PSUBSCRIBE`: nada publicado depois da
+        // confirmação da assinatura fica sem destino.
+        let mut mensagens = sub.message_rx();
+        let (tx, eventos) = mpsc::unbounded_channel();
+        let perdidos = Arc::new(AtomicU64::new(0));
+        let contador = perdidos.clone();
+        tokio::spawn(async move {
+            loop {
+                match mensagens.recv().await {
+                    Ok(mensagem) => {
+                        let topico = mensagem.channel.to_string();
+                        let evento = mensagem
+                            .value
+                            .as_str()
+                            .and_then(|texto| serde_json::from_str::<EventV1>(&texto).ok());
+                        let Some(evento) = evento else {
+                            eprintln!("evento ilegível em `{topico}`: {:?}", mensagem.value);
+                            continue;
+                        };
+                        if tx.send((topico, evento)).is_err() {
+                            break;
+                        }
+                    }
+                    Err(RecvError::Lagged(n)) => {
+                        contador.fetch_add(n, Ordering::Relaxed);
+                    }
+                    Err(RecvError::Closed) => break,
+                }
+            }
+        });
+
+        sub.psubscribe("*").await.expect("`PSUBSCRIBE *`");
+        (sub, eventos, perdidos)
+    }
+
+    /// O que já passou pelo harness, para a mensagem de falha da espera.
+    fn resumo_da_espera(&self, topic: &str) -> String {
+        let no_topico: Vec<&EventV1> = self
+            .event_buffer
+            .iter()
+            .filter(|(t, _)| t == topic)
+            .map(|(_, e)| e)
+            .collect();
+        let outros = self.event_buffer.len() - no_topico.len();
+        let ultimos: Vec<String> = self
+            .event_buffer
+            .iter()
+            .rev()
+            .filter(|(t, _)| t != topic)
+            .take(10)
+            .map(|(t, e)| {
+                let debug = format!("{e:?}");
+                let variante = debug
+                    .split(|c: char| !c.is_alphanumeric() && c != '_')
+                    .next()
+                    .unwrap_or_default()
+                    .to_string();
+                format!("{t}: {variante}")
+            })
+            .collect();
+        format!(
+            "eventos recebidos em `{topic}`: {no_topico:#?}
+             eventos em outros tópicos: {outros} (últimos: {ultimos:?})
+             mensagens descartadas por atraso: {}",
+            self.perdidos.load(Ordering::Relaxed)
+        )
     }
 
     pub fn rand_string() -> String {
@@ -282,22 +390,28 @@ impl TestHarness {
             }
         }
 
-        let mut stream = self.sub.on_message();
-        while let Some(item) = stream.next().await {
-            let msg_topic = item.get_channel_name();
-            let payload: EventV1 = redis_kiss::decode_payload(&item).unwrap();
+        let prazo = tokio::time::Instant::now() + ESPERA_POR_EVENTO;
+        loop {
+            match tokio::time::timeout_at(prazo, self.eventos.recv()).await {
+                Ok(Some((msg_topic, payload))) => {
+                    if topic == msg_topic && predicate(&payload) {
+                        return payload;
+                    }
 
-            if topic == msg_topic && predicate(&payload) {
-                return payload;
+                    self.event_buffer.push((msg_topic, payload));
+                }
+                Ok(None) => panic!(
+                    "a assinatura de eventos do Redis encerrou esperando `{topic}`.
+{}",
+                    self.resumo_da_espera(topic)
+                ),
+                Err(_) => panic!(
+                    "nenhum evento em `{topic}` satisfez o predicado em {ESPERA_POR_EVENTO:?}.
+{}",
+                    self.resumo_da_espera(topic)
+                ),
             }
-
-            self.event_buffer.push((msg_topic.to_string(), payload));
         }
-
-        // WARNING: if predicate is never satisfied, this will never return
-        //          should add a timeout for events so tests can fail gracefully
-
-        unreachable!()
     }
 
     pub async fn assert_email(&self, mailbox: &str) -> (Mail, String) {

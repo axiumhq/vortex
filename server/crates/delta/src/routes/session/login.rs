@@ -206,7 +206,7 @@ mod tests {
     async fn success() {
         let mut harness = TestHarness::new().await;
 
-        Account::new(
+        let account = Account::new(
             &harness.db,
             "example@validemail.com".into(),
             "password_insecure".into(),
@@ -215,7 +215,15 @@ mod tests {
         .await
         .unwrap();
 
-        harness.wait_for_event("global", |_| true).await;
+        // `global` é compartilhado por todos os testes em paralelo, e vários
+        // criam conta com este mesmo e-mail: só conta o que é DESTA conta.
+        let desta_conta = |event: &EventV1| match event {
+            EventV1::CreateAccount { account: a } => a.id == account.id,
+            EventV1::CreateSession { session } => session.user_id == account.id,
+            _ => false,
+        };
+
+        harness.wait_for_event("global", desta_conta).await;
 
         let res = harness.client
             .post("/auth/session/login")
@@ -233,7 +241,7 @@ mod tests {
         assert_eq!(res.status(), Status::Ok);
         assert!(res.into_json::<v0::Session>().await.is_some());
 
-        let event = harness.wait_for_event("global", |_| true).await;
+        let event = harness.wait_for_event("global", desta_conta).await;
         if !matches!(event, EventV1::CreateSession { .. }) {
             panic!("Received incorrect event type. {:?}", event);
         }

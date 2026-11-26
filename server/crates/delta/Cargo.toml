@@ -86,6 +86,8 @@ livekit-protocol = { workspace = true }
 
 [dev-dependencies]
 revolt-config = { workspace = true, features = ["test"] }
+# Assinatura de eventos do `TestHarness`: o mesmo cliente de pub/sub do bonfire.
+fred = { workspace = true, features = ["subscriber-client"] }
 
 [build-dependencies]
 vergen = { workspace = true }
