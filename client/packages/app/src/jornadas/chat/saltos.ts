@@ -57,3 +57,44 @@ export function aoPedirSalto(canalId: string, ouvinte: OuvinteDeSalto): () => vo
 export function pedirSalto(canalId: string, messageId: string): void {
   for (const ouvinte of saltos.get(canalId) ?? []) ouvinte(messageId);
 }
+
+/* ----------------------------------------------------------------- retorno */
+/**
+ * Voltar a um canal ONDE se estava (sair de um tópico para o canal pai).
+ *
+ * A lista é remontada por canal, e remontar reancora no fim: sem isto, abrir
+ * um tópico de uma mensagem antiga e voltar jogaria a pessoa no fim do pai,
+ * longe do que ela lia. A lista guarda a posição ao desmontar (a primeira
+ * linha visível, ou "estava no fim"), e só a RESTAURA quando alguém pediu o
+ * retorno: trocar de canal pela coluna continua abrindo no fim, como sempre.
+ *
+ * Module-level e não estado de componente: quem pede o retorno (o cabeçalho
+ * do tópico) e quem o cumpre (a lista do pai) nunca estão montados juntos.
+ */
+export type PosicaoDaLista = { readonly ancora: string; readonly noFim: boolean };
+
+/** Teto do mapa: uma posição por canal visitado, numa sessão de horas. */
+const TETO_DE_POSICOES = 64;
+
+const posicoes = new Map<string, PosicaoDaLista>();
+const retornos = new Set<string>();
+
+export function guardarPosicao(canalId: string, posicao: PosicaoDaLista): void {
+  posicoes.delete(canalId);
+  posicoes.set(canalId, posicao);
+  if (posicoes.size > TETO_DE_POSICOES) {
+    const maisAntiga = posicoes.keys().next().value;
+    if (maisAntiga !== undefined) posicoes.delete(maisAntiga);
+  }
+}
+
+/** A próxima montagem da lista deste canal volta à posição guardada. */
+export function pedirRetorno(canalId: string): void {
+  retornos.add(canalId);
+}
+
+/** Consumido uma vez: guardar depois de entregue faria todo remonte "voltar". */
+export function consumirRetorno(canalId: string): PosicaoDaLista | undefined {
+  if (!retornos.delete(canalId)) return undefined;
+  return posicoes.get(canalId);
+}

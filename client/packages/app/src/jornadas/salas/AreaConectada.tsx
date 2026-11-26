@@ -4,7 +4,7 @@ import { AreaPrincipal } from "../../shell";
 import { shell } from "../../textos";
 import { PalcoDaSala } from "../voz/Palco";
 import { useSalaDoPalco } from "../voz/hooks";
-import { AreaDoCanal } from "../chat/CabecalhoDoCanal";
+import { AreaDoCanalOuTopico } from "../topicos/AreaDoTopico";
 import { AreaDaDm } from "../casa/AreaDaDm";
 import { TelaDeAmigos } from "../casa/TelaDeAmigos";
 import css from "./Salas.module.css";
@@ -44,7 +44,7 @@ export function AreaConectada() {
   return (
     <AreaPrincipal camada={<WidgetConectado serverId={local.serverId} />}>
       {local.channelId !== undefined ? (
-        <AreaDoCanal key={local.channelId} canalId={local.channelId} servidorId={local.serverId} />
+        <AreaDoCanalOuTopico key={local.channelId} canalId={local.channelId} servidorId={local.serverId} />
       ) : undefined}
     </AreaPrincipal>
   );

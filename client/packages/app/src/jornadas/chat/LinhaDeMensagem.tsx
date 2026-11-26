@@ -18,6 +18,7 @@ import { EmbedsDaMensagem } from "./EmbedsDaMensagem";
 import { EditorInline } from "./EditorInline";
 import { EnqueteDaMensagem } from "./EnqueteDaMensagem";
 import { FraseDeSistema } from "./FraseDeSistema";
+import { useAcaoDeTopico } from "../topicos/acaoDeTopico";
 import { useEditandoEsta } from "./hooks";
 import linha from "./Linha.module.css";
 import css from "./ListaDeMensagens.module.css";
@@ -52,6 +53,7 @@ function LinhaBase({ id, servidorId, grupo }: LinhaDeMensagemProps) {
   const editando = useEditandoEsta(id);
   const compacta = useSyncExternalStore(assinarDensidade, lerDensidade) === "compacto";
   const previas = useSyncExternalStore(assinarAparencia, lerAparencia).previasDeLink;
+  const topico = useAcaoDeTopico(id, m?.channelId, m !== undefined && m.sendState === "sent" && !m.sistema);
 
   if (!m) return <div className={css.placeholder} aria-hidden="true" />;
 
@@ -103,6 +105,8 @@ function LinhaBase({ id, servidorId, grupo }: LinhaDeMensagemProps) {
                   }
                 : undefined
             }
+            onTopico={topico?.executar}
+            topicoAberto={topico?.aberto}
             onMaisAcoes={(e) => abrirMenuDaMensagem(e.currentTarget)}
             rodape={
               <>

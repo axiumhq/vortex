@@ -1,7 +1,8 @@
 import { memo, type MouseEvent, type ReactNode } from "react";
 
 import { chat, ds } from "../../textos";
-import { Imagem, MaisHorizontal, Responder, Sorriso } from "../icones";
+import { topico as textosDeTopico } from "../../textos/topico";
+import { Imagem, MaisHorizontal, Responder, Sorriso, Topicos } from "../icones";
 import { juntar } from "../juntar";
 import { Avatar } from "./Avatar";
 import { Botao } from "./Botao";
@@ -38,6 +39,9 @@ export interface MensagemProps {
   /** O evento vai junto: quem abre um menu ancorado precisa do ponto do clique. */
   onReagir?: (e: MouseEvent<HTMLButtonElement>) => void;
   onResponder?: () => void;
+  /** Criar um tópico a partir da mensagem — ou abrir o que já existe (`topicoAberto`). */
+  onTopico?: () => void;
+  topicoAberto?: boolean;
   onMaisAcoes?: (e: MouseEvent<HTMLButtonElement>) => void;
   /** Depois do corpo e dos anexos: reações, estado de envio, "editada". */
   rodape?: ReactNode;
@@ -84,6 +88,8 @@ function MensagemBase({
   acoes = true,
   onReagir,
   onResponder,
+  onTopico,
+  topicoAberto = false,
   onMaisAcoes,
   rodape,
   compacta = false,
@@ -92,7 +98,7 @@ function MensagemBase({
   tabIndex,
   className,
 }: MensagemProps) {
-  const temAcoes = acoes && (onReagir || onResponder || onMaisAcoes);
+  const temAcoes = acoes && (onReagir || onResponder || onTopico || onMaisAcoes);
 
   return (
     <article
@@ -171,6 +177,15 @@ function MensagemBase({
               icone={<Responder />}
               aria-label={chat.responder}
               onClick={onResponder}
+            />
+          )}
+          {onTopico && (
+            <Botao
+              variante="fantasma"
+              tamanho="sm"
+              icone={<Topicos />}
+              aria-label={topicoAberto ? textosDeTopico.abrir : textosDeTopico.criar}
+              onClick={onTopico}
             />
           )}
           {onMaisAcoes && (

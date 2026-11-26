@@ -116,7 +116,13 @@ describe("o botão", () => {
   it("fica ausente dentro de um tópico: o canal já é o filho", async () => {
     irPara(SERVER_ID, idDo(REVISAO));
     definirCanalAberto(idDo(REVISAO));
-    await abrir();
+    // Dentro de um tópico o cabeçalho é o DO TÓPICO (#459), que não tem fixadas: espera a área dele.
+    montar(
+      <div style={{ inlineSize: "1600px", blockSize: "860px" }}>
+        <ShellDasSalas />
+      </div>,
+    );
+    await expect.poll(() => pegar("[data-topico-aberto]")).not.toBeNull();
     expect(document.querySelector(`[aria-label='${topicos.botao}']`)).toBeNull();
   });
 
@@ -209,9 +215,11 @@ describe("o painel", () => {
     await expect.element(page.getByText(topicos.estados.erro)).toBeVisible();
 
     falhar = false;
+    // Abrir o canal também carrega os tópicos dele (#459): conta só o que "Tentar de novo" pediu.
+    const antes = carregar.mock.calls.length;
     await page.getByRole("button", { name: topicos.estados.tentarDeNovo }).click();
     await expect.element(page.getByText(topicos.estados.vazioArquivados)).toBeVisible();
-    expect(carregar).toHaveBeenCalledTimes(2);
+    expect(carregar).toHaveBeenCalledTimes(antes + 1);
   });
 });
 

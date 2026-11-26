@@ -6,6 +6,7 @@ import css from "./AreaDeChat.module.css";
 import { DigitandoDoCanal } from "./DigitandoDoCanal";
 import { ListaDeMensagens } from "./ListaDeMensagens";
 import { VisualizadorDeImagem } from "./VisualizadorDeImagem";
+import { DialogoDeTopico } from "../topicos/DialogoDeTopico";
 
 /**
  * O chat de um canal: a lista virtualizada e, embaixo, quem está digitando e o
@@ -19,6 +20,10 @@ import { VisualizadorDeImagem } from "./VisualizadorDeImagem";
  * `rodape` substitui o composer quando a conversa tem um motivo próprio para não
  * aceitar escrita (a DM com alguém bloqueado): a frase do motivo ocupa o lugar do
  * campo, na mesma coluna de leitura.
+ *
+ * `topo` vai para o topo do scroller (a mensagem que iniciou um tópico) e
+ * `aviso` é uma frase logo acima do composer, sem tirá-lo do lugar (tópico
+ * arquivado: responder o reabre, então o campo continua).
  */
 /**
  * Os avisos flutuam no canto da janela e o campo de escrever mora no mesmo canto:
@@ -51,25 +56,31 @@ export function AreaDeChat({
   canalId,
   servidorId,
   rodape,
+  topo,
+  aviso,
 }: {
   canalId: string;
   servidorId: string;
   rodape?: ReactNode;
+  topo?: ReactNode;
+  aviso?: ReactNode;
 }) {
   const rodapeRef = useRef<HTMLDivElement | null>(null);
   useFolgaDosAvisos(rodapeRef);
   return (
     <div className={css.chat}>
       <div className={css.lista}>
-        <ListaDeMensagens canalId={canalId} servidorId={servidorId} />
+        <ListaDeMensagens canalId={canalId} servidorId={servidorId} topo={topo} />
       </div>
       {/* Um de cada para o chat inteiro: nada disto é montado por linha. */}
       <SeletorDeReacao />
       <VisualizadorDeImagem servidorId={servidorId} />
+      <DialogoDeTopico />
       <div ref={rodapeRef} className={css.rodape}>
         <div className={css.colunaDoRodape}>
           {rodape ?? (
             <>
+              {aviso}
               <DigitandoDoCanal canalId={canalId} servidorId={servidorId} />
               <Composer canalId={canalId} servidorId={servidorId} />
             </>
