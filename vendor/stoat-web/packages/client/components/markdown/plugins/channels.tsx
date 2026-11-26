@@ -1,7 +1,7 @@
 import { Plugin } from "unified";
 import { visit } from "unist-util-visit";
 
-const RE_CHANNEL = /<#([A-z0-9]{26})>/g;
+const RE_CHANNEL = /<#([A-Za-z0-9]{26})>/g;
 
 export const remarkChannels: Plugin = () => (tree) => {
   visit(
