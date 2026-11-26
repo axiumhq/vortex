@@ -27,7 +27,12 @@ beforeEach(() => {
 describe("volume individual", () => {
   it("começa no padrão e grava dentro dos limites", () => {
     expect(lerVolume(PESSOA)).toBe(VOLUME_PADRAO);
+    expect(VOLUME_MAXIMO).toBe(300);
     definirVolume(PESSOA, 250);
+    expect(lerVolume(PESSOA)).toBe(250);
+    definirVolume(PESSOA, 300);
+    expect(lerVolume(PESSOA)).toBe(300);
+    definirVolume(PESSOA, 9000);
     expect(lerVolume(PESSOA)).toBe(VOLUME_MAXIMO);
     definirVolume(PESSOA, -5);
     expect(lerVolume(PESSOA)).toBe(0);
@@ -42,6 +47,23 @@ describe("volume individual", () => {
     definirVolume(PESSOA, VOLUME_PADRAO);
     expect(JSON.parse(localStorage.getItem("vortex:volumes-de-voz") ?? "{}"))
       .toEqual({});
+  });
+
+  it("valores guardados com o teto antigo (0–100) continuam valendo", async () => {
+    localStorage.setItem(
+      "vortex:volumes-de-voz",
+      JSON.stringify({ baixa: 35, muda: 0, cheia: 100, alta: 250, demais: 9000, texto: "80" }),
+    );
+    /* Um módulo novo é a aba recarregada: lê do armazenamento. */
+    vi.resetModules();
+    const m = await import("./volumesDeVoz");
+    expect(m.lerVolume("baixa")).toBe(35);
+    expect(m.lerVolume("muda")).toBe(0);
+    expect(m.lerVolume("cheia")).toBe(100);
+    expect(m.lerVolume("alta")).toBe(250);
+    expect(m.lerVolume("demais")).toBe(300);
+    expect(m.lerVolume("texto")).toBe(100);
+    localStorage.removeItem("vortex:volumes-de-voz");
   });
 
   it("avisa só quem assina aquela pessoa, e só quando muda", () => {
@@ -59,6 +81,26 @@ describe("volume individual", () => {
 });
 
 describe("volume efetivo", () => {
+  it("vai de 0 a 3 — 300% é ganho de 3×", () => {
+    definirVolume(PESSOA, 300);
+    expect(volumeEfetivo(PESSOA)).toBe(3);
+    definirVolume(PESSOA, 0);
+    expect(volumeEfetivo(PESSOA)).toBe(0);
+  });
+
+  it("surdo e silêncio zeram 300% sem apagar o ajuste", () => {
+    definirVolume(PESSOA, 300);
+    alternarSurdoNoStore();
+    expect(volumeEfetivo(PESSOA)).toBe(0);
+    alternarSurdoNoStore();
+    expect(volumeEfetivo(PESSOA)).toBe(3);
+    alternarSilencioDe(PESSOA);
+    expect(volumeEfetivo(PESSOA)).toBe(0);
+    alternarSilencioDe(PESSOA);
+    expect(volumeEfetivo(PESSOA)).toBe(3);
+    expect(lerVolume(PESSOA)).toBe(300);
+  });
+
   it("silenciar ganha do volume, e dessilenciar devolve o ajuste", () => {
     definirVolume(PESSOA, 60);
     expect(volumeEfetivo(PESSOA)).toBe(0.6);

@@ -200,9 +200,15 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  /* A lista é uma caixa só, do primeiro aviso ao último: sem isto o `gap` entre eles engolia o
+     clique destinado ao que está por baixo. Quem pega o ponteiro é cada aviso. */
+  pointer-events: none;
 }
 
 .aviso {
+  /* Sem modal aberto o Radix não escreve `pointer-events` no aviso, e ele herdaria o `none` da
+     lista. Com modal, o estilo inline do Radix vence esta regra e mantém a decisão dele. */
+  pointer-events: auto;
   position: relative;
   display: grid;
   gap: var(--vx-space-1);

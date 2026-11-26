@@ -9,7 +9,7 @@ import {
   definirVolumeDaTransmissao,
   lerVolumeDaTransmissao,
 } from "nucleo/store/volumesDeTransmissao";
-import { VOLUME_MAXIMO, assinarVolume, definirVolume, lerVolume } from "nucleo/store/volumesDeVoz";
+import { VOLUME_MAXIMO, VOLUME_PASSO, assinarVolume, definirVolume, lerVolume } from "nucleo/store/volumesDeVoz";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { salas, voz } from "../../textos";
@@ -112,8 +112,11 @@ export function LadrilhoDePessoa({
   );
 }
 
+/** Marca no trilho, nos dois deslizantes: 100%, o som como ele chegou. */
+const MARCAS_DO_VOLUME = [VOLUME_DA_TRANSMISSAO_PADRAO] as const;
+
 /**
- * O menu de uma pessoa na sala: o volume da VOZ dela (0–100%) e, se ela
+ * O menu de uma pessoa na sala: o volume da VOZ dela (0–300%) e, se ela
  * transmite a tela, o volume da TRANSMISSÃO (0–300%) — os dois só para você.
  *
  * Abre pelo `⋯` do canto (teclado e toque), pelo botão direito no ladrilho
@@ -163,7 +166,8 @@ function MenuDoParticipante({
           valor={valor}
           min={0}
           max={VOLUME_MAXIMO}
-          passo={VOLUME_DA_TRANSMISSAO_PASSO}
+          passo={VOLUME_PASSO}
+          marcas={MARCAS_DO_VOLUME}
           texto={`${String(valor)}%`}
           aoMudar={(proximo) => {
             definirVolume(userId, proximo);
@@ -174,9 +178,6 @@ function MenuDoParticipante({
     </Popover>
   );
 }
-
-/** Marca no trilho: onde está o som como a pessoa transmitiu. */
-const MARCAS_DO_VOLUME = [VOLUME_DA_TRANSMISSAO_PADRAO] as const;
 
 /**
  * O volume do SOM da transmissão, de 0% a 300%, só para quem assiste.

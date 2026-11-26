@@ -4,6 +4,7 @@ export const shell = {
     rotulo: "Barra de título",
     minimizar: "Minimizar a janela",
     maximizar: "Maximizar a janela",
+    restaurar: "Restaurar a janela",
     fechar: "Fechar a janela",
   },
   conexao: {

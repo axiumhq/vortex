@@ -8,7 +8,7 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { definirPersonalizacao } from "../../tema/personalizado";
 import { PERSONALIZACAO_PADRAO } from "../../tema/personalizar";
-import { assentar } from "../../testes/esperas";
+import { assentar, quadros } from "../../testes/esperas";
 import { alturaDoTipo, type TipoDeLinha } from "./alturas";
 
 import { AreaPrincipal } from "../../shell";
@@ -110,7 +110,7 @@ describe("ListaDeMensagens", () => {
     const altura = el.scrollHeight;
 
     // Só mensagens: cada uma cresce o conteúdo no fim, que é o que reancorava.
-    const parar = startFirehose(60, ids, { message: 1, update: 0, reaction: 0, typing: 0, presence: 0 });
+    const parar = startFirehose(60, ids, { message: 1, update: 0, reaction: 0, typing: 0, presence: 0, pollVote: 0 });
     try {
       await expect.poll(() => el.scrollHeight, { timeout: 5000 }).toBeGreaterThan(altura + 200);
     } finally {
@@ -170,20 +170,28 @@ describe("ListaDeMensagens", () => {
 
 describe("densidade e tamanho do texto na lista", () => {
   type Amostra = { readonly altura: number; readonly tipo: TipoDeLinha };
+  const PASSOS = 30;
 
   /**
    * A altura real de cada linha "limpa" (sem divisor, resposta, reação, anexo nem estado de
    * envio), por índice: é para elas que a constante vale, o resto a lista soma por fora.
-   * Varre a lista em 150 pontos. Como a chave é o índice, duas configurações medem AS MESMAS
-   * linhas e o que se compara é a razão entre elas, sem o ruído de quais linhas cairam na janela.
+   * Como a chave é o índice, duas configurações medem AS MESMAS linhas e o que se compara é a
+   * razão entre elas, sem o ruído de quais linhas cairam na janela.
+   *
+   * PASSOS janelas espaçadas, e não a lista inteira: a razão é média de centenas de linhas
+   * já com 30 janelas, e cada passo custa um salto de rolagem com a janela remontada e
+   * remedida. Com 150 passos por configuração (906 saltos no teste) o teste levava ~120s
+   * numa CPU disputada e estourava o tempo; e o corpo de um teste que estoura CONTINUA
+   * rodando — rolava a lista e trocava a densidade no meio do teste seguinte, que nunca
+   * assentava. O `signal` corta o laço se o teste for abortado, pelo mesmo motivo.
    */
-  async function varrer() {
+  async function varrer(signal: AbortSignal) {
     await expect.poll(() => linhas().length).toBeGreaterThan(0);
-    const quadro = () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
     const saida = new Map<number, Amostra>();
-    for (let passo = 0; passo <= 150; passo++) {
-      log().scrollTop = (log().scrollHeight - log().clientHeight) * (1 - passo / 150);
-      await quadro();
+    for (let passo = 0; passo <= PASSOS; passo++) {
+      signal.throwIfAborted();
+      log().scrollTop = (log().scrollHeight - log().clientHeight) * (1 - passo / PASSOS);
+      await quadros(1);
       for (const l of linhas()) {
         const i = Number(l.dataset["index"]);
         const m = messages.getSnapshot(ids[i] ?? "");
@@ -217,16 +225,16 @@ describe("densidade e tamanho do texto na lista", () => {
     ["compacto", 90],
   ] as const;
 
-  it("a estimativa de altura de cada tipo acompanha a densidade e o tamanho do texto (mesmas linhas, razão a menos de 15%)", async () => {
+  it("a estimativa de altura de cada tipo acompanha a densidade e o tamanho do texto (mesmas linhas, razão a menos de 15%)", async ({ signal }) => {
     montarLista();
-    const base = await varrer();
+    const base = await varrer(signal);
     const resultados: string[] = [];
     const fora: string[] = [];
     for (const [densidade, texto] of casos) {
       definirDensidade(densidade);
       definirAparencia({ texto });
       await assentarLista();
-      const outra = await varrer();
+      const outra = await varrer(signal);
       for (const tipo of ["abreGrupo", "continua", "sistema"] as const) {
         const medida = razao(base, outra, tipo);
         if (medida.n < 5) continue;
@@ -235,7 +243,6 @@ describe("densidade e tamanho do texto na lista", () => {
         if (Math.abs(medida.razao - estimada) / estimada >= 0.15) fora.push(resultados.at(-1) ?? "");
       }
     }
-    // eslint-disable-next-line no-console
     console.info(["[alturas]", ...resultados].join(" | "));
     expect(fora).toEqual([]);
   }, 120_000);

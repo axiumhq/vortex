@@ -7,7 +7,6 @@ use revolt_result::{Error, Result};
 
 use crate::{Database, MFATicket, UnvalidatedTicket, ValidatedTicket};
 
-#[async_trait]
 impl<S> FromRequestParts<S> for MFATicket
 where
     Database: FromRef<S>,
@@ -26,7 +25,6 @@ where
     }
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for ValidatedTicket
 where
     Database: FromRef<S>,
@@ -47,7 +45,6 @@ where
     }
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for UnvalidatedTicket
 where
     Database: FromRef<S>,

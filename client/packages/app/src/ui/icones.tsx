@@ -6,6 +6,7 @@ import {
   ScrollText as LScrollText,
   Bell as LBell,
   BellOff as LBellOff,
+  ChartBar as LChartBar,
   Check as LCheck,
   ChevronDown as LChevronDown,
   ChevronLeft as LChevronLeft,
@@ -33,6 +34,7 @@ import {
   Timer as LTimer,
   LogOut as LLogOut,
   Maximize2 as LMaximize2,
+  Minimize2 as LMinimize2,
   Minus as LMinus,
   MessageSquare as LMessageSquare,
   Mic as LMic,
@@ -61,6 +63,7 @@ import {
   Settings as LSettings,
   Shield as LShield,
   Trash2 as LTrash2,
+  Trophy as LTrophy,
   User as LUser,
   Users as LUsers,
   Video as LVideo,
@@ -121,6 +124,7 @@ export const Arroba = envolver(LAtSign);
 export const Sino = envolver(LBell);
 export const SinoMudo = envolver(LBellOff);
 export const Marcar = envolver(LCheck);
+export const Enquete = envolver(LChartBar);
 export const SetaParaBaixo = envolver(LChevronDown);
 export const SetaParaEsquerda = envolver(LChevronLeft);
 export const SetaParaDireita = envolver(LChevronRight);
@@ -138,6 +142,7 @@ export const Olho = envolver(LEye);
 export const OlhoFechado = envolver(LEyeOff);
 export const SemConexao = envolver(LWifiOff);
 export const Coroa = envolver(LCrown);
+export const Trofeu = envolver(LTrophy);
 export const MaisHorizontal = envolver(LEllipsis);
 export const Alca = envolver(LGripVertical);
 export const Canal = envolver(LHash);
@@ -148,6 +153,7 @@ export const Cadeado = envolver(LLock);
 export const ModoLento = envolver(LTimer);
 export const Sair = envolver(LLogOut);
 export const Maximizar = envolver(LMaximize2);
+export const Restaurar = envolver(LMinimize2);
 export const Minimizar = envolver(LMinus);
 export const Mensagem = envolver(LMessageSquare);
 export const Microfone = envolver(LMic);

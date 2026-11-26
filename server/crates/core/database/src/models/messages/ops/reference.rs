@@ -329,6 +329,12 @@ impl AbstractMessages for ReferenceDb {
             return Err(create_error!(NotFound));
         };
 
+        // Mesma condição do filtro do Mongo, conferida sob o lock: o modelo
+        // leu a mensagem antes, e a enquete pode ter fechado desde então.
+        if !poll.is_open() {
+            return Err(create_error!(InvalidOperation));
+        }
+
         for answer in all_answers {
             if let Some(users) = poll.votes.get_mut(answer) {
                 users.shift_remove(user);

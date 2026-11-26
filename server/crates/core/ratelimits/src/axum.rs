@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use axum::{
     Json, RequestPartsExt, Router,
     body::Body,
@@ -21,7 +20,6 @@ impl RequestKind for AxumRequestKind {
 
 pub type RatelimitStorage = crate::ratelimiter::RatelimitStorage<AxumRequestKind>;
 
-#[async_trait]
 impl<S: Send + Sync> FromRequestParts<S> for Ratelimiter
 where
     Database: FromRef<S>,
@@ -59,7 +57,6 @@ where
     }
 }
 
-#[async_trait]
 impl<S: Send + Sync> FromRequestParts<S> for RatelimitInformation
 where
     Database: FromRef<S>,

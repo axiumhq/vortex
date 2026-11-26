@@ -90,8 +90,7 @@ impl<'r> revolt_rocket_okapi::request::OpenApiFromRequest<'r> for ShieldValidati
     }
 }
 #[cfg(feature = "axum-impl")]
-#[async_trait]
-impl<S> axum::extract::FromRequestParts<S> for ShieldValidationInput {
+impl<S: Send + Sync> axum::extract::FromRequestParts<S> for ShieldValidationInput {
     type Rejection = axum::Json<revolt_result::Error> ;
 
     async fn from_request_parts(

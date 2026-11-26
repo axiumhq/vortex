@@ -6,7 +6,7 @@
     "start": "node servidor.mjs"
   },
   "dependencies": {
-    "sirv": "^3.0.1"
+    "sirv": "^3.0.2"
   },
   "engines": {
     "node": ">=18"

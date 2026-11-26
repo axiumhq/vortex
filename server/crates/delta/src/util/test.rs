@@ -239,6 +239,24 @@ impl TestHarness {
             .await
     }
 
+    /// Vortex: ids dos tópicos do servidor que `session` enxerga em
+    /// `GET /servers/:id/threads` — ativos, ou arquivados com `archived`.
+    pub async fn list_threads(&self, session: &Session, server: &str, archived: bool) -> Vec<String> {
+        let response = self
+            .client
+            .get(format!("/servers/{server}/threads?archived={archived}"))
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), rocket::http::Status::Ok);
+        let list: v0::ThreadListResponse =
+            response.into_json().await.expect("`ThreadListResponse`");
+        list.threads
+            .iter()
+            .map(|thread| thread.id().to_string())
+            .collect()
+    }
+
     /// Vortex: tópicos, FORA de `topico`, em que um evento que casa com
     /// `predicate` já passou pelo buffer. Serve para provar AUSÊNCIA depois
     /// de esperar um sentinela publicado por último.

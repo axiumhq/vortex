@@ -49,16 +49,16 @@ pub async fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(root))
         .route(
-            "/:tag",
+            "/{tag}",
             post(upload_file)
                 .options(options)
                 .layer(DefaultBodyLimit::max(
                     config.features.limits.global.body_limit_size,
                 )),
         )
-        .route("/:tag/:file_id", get(fetch_preview))
-        .route("/:tag/:file_id/:file_name", get(fetch_file))
-        .route("/mod/:tag/:file_id/:file_name", get(fetch_file_mod))
+        .route("/{tag}/{file_id}", get(fetch_preview))
+        .route("/{tag}/{file_id}/{file_name}", get(fetch_file))
+        .route("/mod/{tag}/{file_id}/{file_name}", get(fetch_file_mod))
         .layer(cors)
 }
 
@@ -593,5 +593,60 @@ mod tests {
             super::hex_lower(&hasher.finalize()),
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         );
+    }
+
+    /// O axum 0.8 trocou `/:param` por `/{param}`, e a sintaxe antiga COMPILA:
+    /// só falha em runtime (pânico ao montar o router, ou 404 se alguém
+    /// desligar a checagem). O fallback com status próprio separa "nenhuma
+    /// rota casou" de "o handler respondeu 404".
+    #[tokio::test]
+    async fn rotas_com_parametro_casam() {
+        use axum::{body::Body, http::Request, http::StatusCode};
+        use revolt_database::DatabaseInfo;
+        use tower::ServiceExt;
+
+        let state = crate::AppState {
+            database: DatabaseInfo::Reference.connect().await.unwrap(),
+            ratelimit_storage: revolt_ratelimits::axum::RatelimitStorage::new(
+                crate::ratelimits::AutumnRatelimits,
+            ),
+        };
+
+        let app = super::router()
+            .await
+            .fallback(|| async { StatusCode::IM_A_TEAPOT })
+            .with_state(state);
+
+        let status = |method: &'static str, uri: &'static str| {
+            let app = app.clone();
+            async move {
+                app.oneshot(
+                    Request::builder()
+                        .method(method)
+                        .uri(uri)
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+                .status()
+            }
+        };
+
+        // controle: caminho inexistente cai no fallback
+        assert_eq!(status("GET", "/nao/existe/aqui/mesmo/x").await, StatusCode::IM_A_TEAPOT);
+
+        for (method, uri) in [
+            ("POST", "/attachments"),
+            ("GET", "/attachments/arquivo"),
+            ("GET", "/attachments/arquivo/nome.png"),
+            ("GET", "/mod/attachments/arquivo/nome.png"),
+        ] {
+            assert_ne!(
+                status(method, uri).await,
+                StatusCode::IM_A_TEAPOT,
+                "{method} {uri} não casou com nenhuma rota"
+            );
+        }
     }
 }

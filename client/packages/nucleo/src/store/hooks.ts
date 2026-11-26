@@ -65,6 +65,7 @@ import {
   chaveDoServidor,
   foruns,
   listasDeTopicos,
+  topicoPorMensagem,
   topicos,
   type Recorte,
 } from "../sdk/topicos";
@@ -84,6 +85,12 @@ import { assinarFalhaDeVoz, lerFalhaDeVoz, type FalhaDeVoz } from "./falhaDeVoz"
 import { assinarSeletorDeTela, lerSeletorDeTela, type EstadoDoSeletor } from "./seletorDeTela";
 import { chaveDeVideo, faixasDeVideo, type FonteDeVideo } from "./video";
 import { assinarProntidao, lerProntidao } from "./prontidao";
+import {
+  assinarFuncoesDoServidor,
+  servidorTemEnquetes,
+  servidorTemTopicos,
+} from "../sdk/funcoes";
+import { assinarMinutoAtual, lerMinutoAtual } from "./relogioDeEnquetes";
 import {
   assinarPreferenciasDaSala,
   lerCantoDaSala,
@@ -654,6 +661,18 @@ export function useTopico(id: string): TopicoSnapshot | undefined {
   return useSyncExternalStore(topicos.subscriber(id), getSnapshot);
 }
 
+/**
+ * O tópico aberto sobre uma mensagem (ID do tópico), ou `undefined`.
+ *
+ * Assina SÓ a mensagem: abrir, arquivar ou apagar um tópico acorda a linha
+ * dele, e nenhuma outra.
+ */
+export function useTopicoDaMensagem(messageId: string): string | undefined {
+  const getSnapshot = () => topicoPorMensagem.getSnapshot(messageId);
+  if (import.meta.env.DEV) assertStable(getSnapshot, `useTopicoDaMensagem(${messageId})`);
+  return useSyncExternalStore(topicoPorMensagem.subscriber(messageId), getSnapshot) ?? undefined;
+}
+
 function useListaDeTopicos(chave: string): readonly string[] {
   const getSnapshot = () => listasDeTopicos.getSnapshot(chave) ?? NO_IDS;
   if (import.meta.env.DEV) assertStable(getSnapshot, `useListaDeTopicos(${chave})`);
@@ -721,6 +740,21 @@ export function useConexao(): EstadoDaConexao {
 /** O detalhe da conexão (última sincronia). Referência cacheada no store. */
 export function useDetalheDaConexao(): DetalheDaConexao {
   return useSyncExternalStore(assinarConexao, lerDetalheDaConexao);
+}
+
+/** O servidor anuncia enquetes (`features.vortex`)? Reage à configuração chegando. */
+export function useTemEnquetes(): boolean {
+  return useSyncExternalStore(assinarFuncoesDoServidor, servidorTemEnquetes);
+}
+
+/** O servidor anuncia tópicos (`features.vortex`)? Reage à configuração chegando. */
+export function useTemTopicos(): boolean {
+  return useSyncExternalStore(assinarFuncoesDoServidor, servidorTemTopicos);
+}
+
+/** O minuto atual (ms, arredondado para baixo). Um timer só para todas as linhas. */
+export function useMinutoAtual(): number {
+  return useSyncExternalStore(assinarMinutoAtual, lerMinutoAtual);
 }
 
 /** O `Ready` desta sessão já chegou? Antes dele a interface mostra esqueleto. */

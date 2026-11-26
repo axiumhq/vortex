@@ -13,6 +13,7 @@
 import { decodeTime, monotonicFactory, ulid } from "ulid";
 
 import { definirEnqueteBruta, lerEuDasEnquetes } from "../store/enquetes";
+import { definirFuncoesDoArnes } from "../sdk/funcoes";
 import { registrarFigurinhaLocal } from "../sdk/figurinhasDeMensagem";
 import { FIGURINHAS_DO_ARNES, semearExpressoesDoArnes } from "./expressoesDoArnes";
 import {
@@ -1805,6 +1806,8 @@ export async function seed(count: number, chunk = 250): Promise<string[]> {
   // Carga em massa e chegada incremental são caminhos diferentes. Misturar os
   // dois dá duas fontes competindo pela mesma lista.
   ensureWorld();
+  /* O arnês simula um servidor com enquetes e tópicos (`features.vortex`). */
+  definirFuncoesDoArnes(["polls", "threads"]);
 
   const ids: string[] = [];
 
@@ -1823,6 +1826,7 @@ export async function seed(count: number, chunk = 250): Promise<string[]> {
   semearExpressoesDoArnes(SERVER_ID);
   seedChannel(CHANNEL_ID, ids);
   semearEnquetes(ids);
+  semearTopicosDeMensagens(ids);
   ultimaLista = ids;
   // Agora sim: a partir daqui, mensagem nova chega por evento.
   startAdapter();
@@ -1862,6 +1866,14 @@ export async function seed(count: number, chunk = 250): Promise<string[]> {
   return ids;
 }
 
+/** As enquetes semeadas. A aberta é o alvo dos votos do firehose (`pollVote`). */
+let enquetesSemeadas: { readonly aberta: string; readonly encerrada: string } | undefined;
+
+/** Quais mensagens do arnês carregam as enquetes semeadas — para teste e gate. */
+export function enquetesDoArnes(): { readonly aberta: string; readonly encerrada: string } | undefined {
+  return enquetesSemeadas;
+}
+
 /**
  * Duas enquetes no histórico — uma aberta e uma encerrada.
  *
@@ -1879,11 +1891,54 @@ export async function seed(count: number, chunk = 250): Promise<string[]> {
  * prova a outra: a aberta tem prazo, voto e barra neutra; a encerrada tem
  * selo, troféu e barra verde.
  */
+/**
+ * Parte das mensagens do canal do firehose abre tópico — uma em cada 40.
+ *
+ * Sem isto o índice mensagem -> tópico nasce vazio no gate: `useTopicoDaMensagem`
+ * devolveria `undefined` em toda linha e o caminho "linha com tópico" nunca
+ * seria medido. Um em cada cinco desses arquivado, porque são os que o `Ready`
+ * não traz e que `carregarTopicosDoCanal` busca.
+ */
+function semearTopicosDeMensagens(ids: readonly string[]): void {
+  const eu = userIds[0]!;
+  const canais: object[] = [];
+  ids.forEach((mid, i) => {
+    if (i % 40 !== 17) return;
+    const quando = decodeTime(mid);
+    const id = ulidEm(quando + 2);
+    canais.push({
+      _id: id,
+      channel_type: "TextChannel",
+      server: SERVER_ID,
+      name: `tópico ${i}`,
+      last_message_id: ulidEm(quando + 60_000),
+      thread: {
+        parent: CHANNEL_ID,
+        owner: userIds[(i % (userIds.length - 1)) + 1] ?? eu,
+        message: mid,
+        archived: (i / 40) % 5 < 1,
+        tags: [],
+        followers: [eu],
+      },
+    });
+  });
+  for (const c of canais) client.channels.getOrCreate((c as { _id: string })._id, c as never);
+  anotarCanais(canais);
+}
+
 function semearEnquetes(ids: readonly string[]): void {
-  // Perto do fim, para caírem na primeira janela de leitura sem ninguém rolar.
-  const aberta = ids[ids.length - 6];
-  const encerrada = ids[ids.length - 3];
+  /*
+    Perto do fim, para caírem na primeira janela de leitura sem ninguém rolar —
+    e só em mensagem de GENTE. A posição fixa (`-6`) caía numa linha de sistema
+    ("fulano adicionou…"), que a lista agrupa e que não desenha rodapé: a
+    enquete aberta existia no store e nunca aparecia, e os votos do firehose
+    iam para uma linha que ninguém assina.
+  */
+  const deGente = ids.filter((id) => !client.messages.get(id)?.systemMessage);
+  const aberta = deGente[deGente.length - 5];
+  const encerrada = deGente[deGente.length - 2];
   if (!aberta || !encerrada) return;
+  enquetesSemeadas = { aberta, encerrada };
 
   /* Votos são IDs, como o protocolo manda — contagem é derivada no store. */
   const gente = (n: number, prefixo: string) =>
@@ -2130,11 +2185,15 @@ export type FirehoseMix = {
   reaction: number;
   typing: number;
   presence: number;
+  /** `MessagePollVote` na enquete aberta semeada. */
+  pollVote: number;
 };
 
 /** Proporção de um canal movimentado: presença domina, mensagem é minoria. */
 const DEFAULT_MIX: FirehoseMix = {
-  presence: 55,
+  presence: 53,
+  /* ~10 votos/s a 500 ev/s: o gate mede que um voto acorda SÓ a linha da enquete. */
+  pollVote: 2,
   typing: 20,
   reaction: 15,
   update: 6,
@@ -2229,6 +2288,27 @@ export function startFirehose(
           const user = client.users.get(userIds[n % QUEM_DIGITA]!);
           if (channel && user) {
             client.emit(n % 2 ? "channelStartTyping" : "channelStopTyping", channel, user);
+          }
+          break;
+        }
+
+        case "pollVote": {
+          /*
+            Pelo caminho cru do socket, o mesmo de um `MessagePollVote` real:
+            `anotarEventoDeEnquete` aplica e `republicarEnquete` acorda só a
+            linha da enquete. Outras pessoas, nunca o "eu" — trocar o meu voto
+            por baixo de quem está olhando não é carga, é ruído.
+          */
+          const alvo = enquetesSemeadas?.aberta;
+          const user = userIds[1 + (n % (userIds.length - 1))];
+          if (alvo && user) {
+            const respostas = [["r0"], ["r1"], []][n % 3]!;
+            client.events.emit("event", {
+              type: "MessagePollVote",
+              id: alvo,
+              user_id: user,
+              answers: respostas,
+            } as never);
           }
           break;
         }

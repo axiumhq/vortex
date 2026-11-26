@@ -41,7 +41,9 @@ pub trait AbstractMessages: Sync + Send {
     /// Replace a user's vote on a message's poll (Vortex)
     ///
     /// `all_answers` lists every answer id of the poll, so the previous vote
-    /// can be removed wherever it was.
+    /// can be removed wherever it was. The write only applies while the poll
+    /// is still open (not ended, not expired); otherwise it fails with
+    /// `InvalidOperation` and nothing is recorded.
     async fn set_poll_vote(
         &self,
         id: &str,

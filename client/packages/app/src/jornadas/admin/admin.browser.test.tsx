@@ -19,7 +19,7 @@ import type { EntradaDeAuditoria, FiltroDeAuditoria, InformacaoDeBanimento } fro
 import type { Cargo } from "nucleo/sdk/cargos";
 import { client } from "nucleo/sdk/client";
 import { chaveDeMembro, SEM_CARGO } from "nucleo/sdk/domain";
-import { filas, politicas, POLITICA_PADRAO } from "nucleo/sdk/seguranca";
+import { aplicarEventoCru, filas, politicas, POLITICA_PADRAO } from "nucleo/sdk/seguranca";
 import type { Banido, Convite, ConviteDoServidor } from "nucleo/sdk/servidores";
 import { abrirConfig, limparConfig, lerConfig } from "nucleo/store/config";
 import { limparFiltroDeMidia } from "nucleo/store/filtroDeMidia";
@@ -30,6 +30,7 @@ import { abrirServidor, limparUltimoLugar } from "nucleo/store/ultimoLugar";
 import { page } from "vitest/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { quadros } from "../../testes/esperas";
 import { admin, permissoesDeAlvo } from "../../textos";
 import { desmontar, montar, pegar } from "../../ui/ds/montar";
 import { Avisos } from "../../ui/primitivos/Avisos";
@@ -1996,5 +1997,107 @@ describe("permissões por canal e por categoria", () => {
     expect(
       document.querySelector('[aria-label^="Permissões da categoria"]'),
     ).toBeNull();
+  });
+});
+
+describe("aviso de emergÃªncia no topo do servidor", () => {
+  const ate = () => Date.now() + 3_600_000;
+  const emergenciaAte = (ateMs: number) => ({
+    ...POLITICA_PADRAO,
+    emergencia: {
+      ateMs,
+      pausaConvites: true,
+      silenciaTodos: true,
+      congelaEntradas: true,
+    },
+  });
+  const aviso = () =>
+    document.querySelector<HTMLElement>('[data-testid="aviso-de-emergencia"]');
+  const hora = (ms: number) =>
+    new Intl.DateTimeFormat("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(ms);
+
+  /** Onde fica a Ã¡rea principal e o que rola dentro dela: Ã© a Ã¢ncora da lista. */
+  function geometria() {
+    const principal = document.querySelector("main")!;
+    const r = principal.getBoundingClientRect();
+    const rolaveis = [...principal.querySelectorAll<HTMLElement>("*")]
+      .filter((el) => /auto|scroll/.test(getComputedStyle(el).overflowY))
+      .map((el) => {
+        const b = el.getBoundingClientRect();
+        return [b.top, b.height, el.scrollTop];
+      });
+    return { topo: r.top, altura: r.height, rolaveis };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("aparece com a hora do fim e a lista nÃ£o mexe um pixel", async () => {
+    await abrirShell();
+    const antes = geometria();
+    const fim = ate();
+    politicas.set(S, emergenciaAte(fim));
+    await expect.poll(aviso).not.toBeNull();
+    expect(aviso()!.textContent).toContain(
+      admin.avisoDeEmergencia.texto(hora(fim)),
+    );
+    await quadros(3);
+    expect(geometria()).toEqual(antes);  });
+
+  it("some sozinho quando o prazo vence", async () => {
+    await abrirShell();
+    politicas.set(S, emergenciaAte(Date.now() + 400));
+    await expect.poll(aviso).not.toBeNull();
+    await expect.poll(aviso, { timeout: 3000 }).toBeNull();
+  });
+
+  it("some quando o servidor limpa a emergÃªncia por evento", async () => {
+    await abrirShell();
+    politicas.set(S, emergenciaAte(ate()));
+    await expect.poll(aviso).not.toBeNull();
+    aplicarEventoCru({ type: "ServerUpdate", id: S, clear: ["Security"] });
+    await expect.poll(aviso).toBeNull();
+  });
+
+  it("quem administra encerra, depois de confirmar", async () => {
+    await abrirShell();
+    politicas.set(S, emergenciaAte(ate()));
+    const del = vi
+      .spyOn(client.api, "delete")
+      .mockImplementation((() => Promise.resolve({ security: {} })) as never);
+    await expect.poll(aviso).not.toBeNull();
+    await page
+      .getByRole("button", { name: admin.avisoDeEmergencia.encerrar, exact: true })
+      .click();
+    // SÃ³ pergunta: nada foi para o servidor ainda.
+    await expect
+      .element(page.getByText(admin.avisoDeEmergencia.confirmarTitulo))
+      .toBeVisible();
+    expect(del).not.toHaveBeenCalled();
+    await page
+      .getByRole("button", { name: admin.avisoDeEmergencia.confirmarAcao })
+      .click();
+    await expect.poll(() => del.mock.calls.length).toBe(1);
+    expect(del.mock.calls[0]?.[0]).toBe("/servers/S1/emergency");
+    await expect.poll(aviso).toBeNull();
+  });
+
+  it("sem permissÃ£o o aviso aparece, mas sem o botÃ£o de encerrar", async () => {
+    ctl.acoes = new Set();
+    await abrirShell();
+    politicas.set(S, emergenciaAte(ate()));
+    await expect.poll(aviso).not.toBeNull();
+    expect(aviso()!.querySelector("button")).toBeNull();
+  });
+
+  it("emergÃªncia de outro servidor nÃ£o aparece no aberto", async () => {
+    await abrirShell();
+    politicas.set("S2", emergenciaAte(ate()));
+    await quadros(3);
+    expect(aviso()).toBeNull();
   });
 });

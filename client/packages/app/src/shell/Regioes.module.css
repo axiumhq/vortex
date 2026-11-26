@@ -84,6 +84,13 @@
   gap: var(--vx-space-2);
 }
 
+/* Os avisos da barra (emergência do servidor, conexão) lado a lado; vazio não ocupa nada. */
+.avisos {
+  display: flex;
+  align-items: center;
+  gap: var(--vx-space-2);
+}
+
 /* Um aviso só para a queda de conexão, no meio da barra; some quando volta. */
 .conexao {
   display: inline-flex;

@@ -1,7 +1,7 @@
 import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { chat, ds } from "../../textos";
-import { Enviar, Mais, Sorriso } from "../icones";
+import { Enquete, Enviar, Mais, Sorriso } from "../icones";
 import { juntar } from "../juntar";
 import { Botao } from "./Botao";
 import css from "./CampoDeMensagem.module.css";
@@ -23,6 +23,8 @@ export interface CampoDeMensagemProps {
   /** Os botões de anexar e emoji só existem com tratador (controle sem ação não aparece). */
   onAnexar?: () => void;
   onEmoji?: () => void;
+  /** Criar enquete. Sem tratador o botão não existe (nunca fica cinza). */
+  onEnquete?: () => void;
   /** Acima da linha de escrita, dentro da mesma caixa: prévia de resposta, anexos. */
   topo?: ReactNode;
   /** Há algo além do texto a enviar (anexos): enviar vazio passa a valer. */
@@ -45,6 +47,7 @@ export function CampoDeMensagem({
   enviando = false,
   onAnexar,
   onEmoji,
+  onEnquete,
   topo,
   permitirVazio = false,
   areaRef,
@@ -102,6 +105,18 @@ export function CampoDeMensagem({
               aria-label={chat.anexar}
               disabled={desabilitado}
               onClick={onAnexar}
+            />
+          )}
+          {onEnquete && (
+            <Botao
+              variante="fantasma"
+              tamanho="sm"
+              icone={<Enquete />}
+              aria-label={chat.criarEnquete.botao}
+              title={chat.criarEnquete.botao}
+              data-gatilho-de-enquete=""
+              disabled={desabilitado}
+              onClick={onEnquete}
             />
           )}
           <textarea

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { rodapeDaEnquete } from "./enquetes";
+import { instanteDoFim, resultadoVisivel, rodapeDaEnquete, type Enquete } from "./enquetes";
 
 describe("rodapeDaEnquete", () => {
   it("diz 'você votou' depois do voto — o que faltava no rodapé", () => {
@@ -40,5 +40,39 @@ describe("rodapeDaEnquete", () => {
       revista, é `lib/plural.ts` que muda, e este teste acusa.
     */
     expect(rodapeDaEnquete(0, false, false)).toBe("0 voto");
+  });
+});
+
+const base: Enquete = {
+  pergunta: "Q",
+  opcoes: [],
+  maximo: 1,
+  meusVotos: [],
+  fechaEm: 10_000,
+  encerradaEm: undefined,
+  resultadoNoFim: true,
+};
+
+describe("resultadoVisivel", () => {
+  it("resultado no fim esconde enquanto corre e eu não votei", () => {
+    expect(resultadoVisivel(base, 5000)).toBe(false);
+  });
+
+  it("aparece depois do meu voto, do prazo ou do encerramento", () => {
+    expect(resultadoVisivel({ ...base, meusVotos: ["r0"] }, 5000)).toBe(true);
+    expect(resultadoVisivel(base, 10_000)).toBe(true);
+    expect(resultadoVisivel({ ...base, fechaEm: undefined, encerradaEm: 4000 }, 5000)).toBe(true);
+  });
+
+  it("sem 'resultado no fim', sempre à vista", () => {
+    expect(resultadoVisivel({ ...base, resultadoNoFim: false }, 5000)).toBe(true);
+  });
+});
+
+describe("instanteDoFim", () => {
+  it("aberta não tem fim; encerrada pelo autor usa o ended_at; pelo prazo, o prazo", () => {
+    expect(instanteDoFim(base, 5000)).toBeUndefined();
+    expect(instanteDoFim({ ...base, fechaEm: undefined, encerradaEm: 4000 }, 5000)).toBe(4000);
+    expect(instanteDoFim(base, 12_000)).toBe(10_000);
   });
 });

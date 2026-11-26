@@ -45,6 +45,12 @@ export type Acao =
   | "reagir"
   /** Fixar e desafixar no canal. `ManageMessages`. */
   | "fixar"
+  /**
+   * Encerrar a enquete de OUTRA pessoa antes do prazo. `ManageMessages` — a
+   * mesma permissão que o servidor confere na rota `poll/end`; o autor
+   * encerra a própria sem ela, e essa parte é do componente.
+   */
+  | "encerrarEnquete"
   /** Marcar como lida. Não é permissão de servidor — é do próprio usuário. */
   | "marcarLida"
   /* --- administração -------------------------------------------------- */
@@ -117,6 +123,7 @@ const PERMISSAO: Record<Acao, string | undefined> = {
   responder: "SendMessage",
   reagir: "React",
   fixar: "ManageMessages",
+  encerrarEnquete: "ManageMessages",
   marcarLida: undefined,
 
   gerenciarCanais: "ManageChannel",

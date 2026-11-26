@@ -542,6 +542,128 @@ describe("convite sem sessão (/convite/:codigo)", () => {
   });
 });
 
+describe("download público (/download)", () => {
+  it("mostra a página, aponta para os quatro pacotes e exibe o instalador HTTPS ao selecionar Linux", async () => {
+    definirEntrada({ tipo: "download" });
+    montar(
+      <Autenticacao
+        entrando={false}
+        causa={undefined}
+        motivo={undefined}
+        aoEntrar={() => undefined}
+      />,
+    );
+
+    expect(titulo()).toBe(sessao.download.titulo);
+    const links = [
+      ...document.querySelectorAll<HTMLAnchorElement>(
+        "a[data-pacote][href*='/releases/latest/download/']",
+      ),
+    ];
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "https://github.com/axiumhq/vortex/releases/latest/download/Vortex-Setup.exe",
+      "https://github.com/axiumhq/vortex/releases/latest/download/Vortex.deb",
+      "https://github.com/axiumhq/vortex/releases/latest/download/Vortex.pkg.tar.zst",
+      "https://github.com/axiumhq/vortex/releases/latest/download/Vortex-linux.zip",
+    ]);
+    expect(links.every((link) => link.target === "_blank")).toBe(true);
+
+    const principal = pegar<HTMLAnchorElement>('[data-testid="download-principal"]');
+    expect(principal).not.toBeNull();
+    expect(principal?.target).toBe("_blank");
+
+    const seletorArch = [...document.querySelectorAll<HTMLButtonElement>("button")].find((b) =>
+      b.textContent?.includes(sessao.download.arch),
+    );
+    expect(seletorArch).toBeDefined();
+    seletorArch!.click();
+    await assentar();
+
+    expect(texto()).toContain("curl --proto '=https' --tlsv1.2 -fsSL https://");
+    expect(texto()).toContain("/install.sh | sh");
+    expect(principal?.getAttribute("href")).toBe(
+      "https://github.com/axiumhq/vortex/releases/latest/download/Vortex.pkg.tar.zst",
+    );
+  });
+
+  it("detecta o sistema sem presumir Debian em Linux genérico e gera comando apenas HTTPS", async () => {
+    const { comandoInstaladorLinux, detectarSistema } = await import("./TelaDeDownload");
+
+    expect(detectarSistema("Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Win32")).toBe("windows");
+    expect(detectarSistema("Mozilla/5.0 (X11; Ubuntu; Linux x86_64)", "Linux x86_64")).toBe("debian");
+    expect(detectarSistema("Mozilla/5.0 (X11; Arch Linux x86_64)", "Linux x86_64")).toBe("arch");
+    expect(detectarSistema("Mozilla/5.0 (X11; Linux x86_64)", "Linux x86_64")).toBe("linux");
+    expect(detectarSistema("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "MacIntel")).toBe("macos");
+    expect(detectarSistema("Mozilla/5.0 (Linux; Android 14)", "Linux armv8l")).toBe("desconhecido");
+
+    expect(comandoInstaladorLinux("https://vortex.exemplo")).toBe(
+      "curl --proto '=https' --tlsv1.2 -fsSL https://vortex.exemplo/install.sh | sh",
+    );
+    expect(comandoInstaladorLinux("http://localhost:4189")).toContain(
+      "curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/",
+    );
+  });
+
+  it("exibe aviso de macOS sem marcar nenhum pacote como seu sistema", async () => {
+    const { TelaDeDownload } = await import("./TelaDeDownload");
+
+    montar(<TelaDeDownload sistemaInicial="macos" />);
+    expect(texto()).toContain(sessao.download.macos);
+    expect(texto()).not.toContain(sessao.download.sinalSeuSistema);
+  });
+
+  it("exibe a etiqueta do sistema detectado e copia o comando de instalação", async () => {
+    const { TelaDeDownload } = await import("./TelaDeDownload");
+
+    const escrever = vi.fn().mockResolvedValue(undefined);
+    const clipboardAnterior = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: escrever },
+      configurable: true,
+    });
+    try {
+      montar(<TelaDeDownload sistemaInicial="linux" />);
+      expect(texto()).toContain(sessao.download.sinalSeuSistema);
+
+      const botaoCopiar = pegar<HTMLButtonElement>(
+        `button[aria-label="${sessao.download.copiarComando}"]`,
+      );
+      expect(botaoCopiar).not.toBeNull();
+      await userEvent.click(botaoCopiar!);
+      await expect.poll(() => escrever.mock.calls.length).toBe(1);
+      expect(escrever.mock.calls[0]?.[0]).toContain("curl --proto '=https' --tlsv1.2 -fsSL https://");
+      expect(texto()).toContain(sessao.download.copiado);
+    } finally {
+      Object.defineProperty(navigator, "clipboard", {
+        value: clipboardAnterior,
+        configurable: true,
+      });
+    }
+  });
+
+  it("aparece sem esperar a restauração da sessão", () => {
+    limparSessao();
+    definirEntrada({ tipo: "download" });
+    montar(<PortaoDeSessao iniciar={() => undefined}>{null}</PortaoDeSessao>);
+
+    expect(titulo()).toBe(sessao.download.titulo);
+  });
+
+  it("continua pública quando a pessoa já está conectada", async () => {
+    definirEntrada({ tipo: "download" });
+    dentro("01U");
+    montar(
+      <PortaoDeSessao iniciar={() => undefined}>
+        <p data-testid="app">dentro do app</p>
+      </PortaoDeSessao>,
+    );
+    await assentar();
+
+    expect(titulo()).toBe(sessao.download.titulo);
+    expect(pegar('[data-testid="app"]')).toBeNull();
+  });
+});
+
 describe("convite aberto dentro do app", () => {
   const props = { codigo: "abc123", aoDispensar: () => undefined, aoAbrir: () => undefined };
 

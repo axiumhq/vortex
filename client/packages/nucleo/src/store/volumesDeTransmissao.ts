@@ -13,9 +13,9 @@ import { estaSilenciado } from "./sobrePessoas";
  *
  * ⚠ **Acima de 100% é real, e não passa pelo `<audio>`.** `HTMLMediaElement.
  * volume` LANÇA fora de [0, 1]; o motor dá a cada faixa de som de tela um
- * `AudioContext` próprio e o LiveKit aplica o ganho num `GainNode` (ver
- * `sdk/audioDaTransmissao.ts`). A voz das pessoas não muda de caminho — é por
- * isso que `volumesDeVoz.ts` continua com teto em 100.
+ * `AudioContext` e o LiveKit aplica o ganho num `GainNode` (ver
+ * `sdk/audioAmplificavel.ts`). A voz das pessoas passa pelo mesmo contexto,
+ * com o próprio eixo em `volumesDeVoz.ts`.
  *
  * Keyed pelo ID de quem TRANSMITE: quem compartilha um jogo alto compartilha
  * alto em toda sala. Mesma família de `volumesDeVoz.ts` — dado local sobre

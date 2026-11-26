@@ -171,3 +171,24 @@ describe("corpoDaEnquete", () => {
     expect((corpo["poll"] as { max_answers: number }).max_answers).toBe(1);
   });
 });
+
+describe("BulkMessageDelete", () => {
+  it("remove as enquetes das mensagens apagadas em lote", () => {
+    anotarEventoDeEnquete({ type: "Message", _id: "B1", poll: POLL });
+    anotarEventoDeEnquete({ type: "Message", _id: "B2", poll: POLL });
+    anotarEventoDeEnquete({ type: "Message", _id: "B3", poll: POLL });
+    const mudadas = anotarEventoDeEnquete({
+      type: "BulkMessageDelete",
+      channel: "C",
+      ids: ["B1", "B2", "SEM_ENQUETE", 7],
+    });
+    expect([...mudadas].sort()).toEqual(["B1", "B2"]);
+    expect(lerEnquete("B1")).toBeUndefined();
+    expect(lerEnquete("B2")).toBeUndefined();
+    expect(lerEnquete("B3")).toBeDefined();
+  });
+
+  it("forma invalida nao quebra", () => {
+    expect(anotarEventoDeEnquete({ type: "BulkMessageDelete" })).toEqual([]);
+  });
+});

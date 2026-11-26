@@ -45,5 +45,5 @@ axum = { workspace = true }
 axum-extra = { workspace = true, features = ["typed-header"] }
 
 # OpenAPI & documentation generation
-utoipa-scalar = { workspace = true, features = ["axum"] }
+utoipa-scalar = { workspace = true }
 utoipa = { workspace = true, features = ["axum_extras", "ulid"] }

@@ -151,6 +151,47 @@ export const foruns = createEntityStore<MetaDeForum | null>((id) => {
   if (foruns.peek(id) === undefined) foruns.set(id, lerForum(id) ?? null);
 });
 
+/**
+ * Índice mensagem -> tópico, uma entidade por `messageId` (lei nº 1).
+ *
+ * `string` = ID do tópico aberto sobre a mensagem; `null` = já teve e deixou
+ * de ter (apagado, ou a mensagem trocou de tópico) — o snapshot FICA, como em
+ * toda entity store, e `null` é o que acorda quem assinava. Ausente = nunca
+ * soube. Só entram tópicos de MENSAGEM: a abertura de um post de fórum mora
+ * dentro dele, e não é "uma mensagem com tópico".
+ *
+ * Alimentado por `republicar`, que roda em toda mudança de meta (criar,
+ * atualizar, apagar) — com ou sem assinante, porque o índice precisa estar
+ * pronto antes de a primeira linha perguntar.
+ */
+export const topicoPorMensagem = createEntityStore<string | null>();
+/** Reverso: qual mensagem cada tópico indexa — para desindexar sem varrer. */
+const mensagemDoTopico = new Map<string, string>();
+
+function indexar(topicoId: string, meta: MetaDeTopico | undefined): void {
+  const alvo =
+    meta !== undefined && meta.aberturaId !== undefined && lerForum(meta.paiId) === undefined
+      ? meta.aberturaId
+      : undefined;
+  const atual = mensagemDoTopico.get(topicoId);
+  if (atual === alvo) return;
+  if (atual !== undefined) {
+    mensagemDoTopico.delete(topicoId);
+    // Só solta se a mensagem ainda aponta para ESTE tópico.
+    if (topicoPorMensagem.peek(atual) === topicoId) topicoPorMensagem.set(atual, null);
+  }
+  if (alvo !== undefined) {
+    mensagemDoTopico.set(topicoId, alvo);
+    topicoPorMensagem.set(alvo, topicoId);
+  }
+}
+
+/** Só para testes. */
+export function limparIndiceDeTopicos(): void {
+  for (const msg of mensagemDoTopico.values()) topicoPorMensagem.set(msg, null);
+  mensagemDoTopico.clear();
+}
+
 function paiEhForum(id: string): boolean {
   const meta = lerTopico(id);
   return meta !== undefined && lerForum(meta.paiId) !== undefined;
@@ -207,6 +248,7 @@ function republicar(ids: readonly string[] | undefined): void {
   const paisTocados = new Set<string>();
   for (const id of alvos) {
     const meta = lerTopico(id);
+    indexar(id, meta);
     if (!meta) continue;
     topicos.set(id, derivarTopico(id, meta, lerContagem(id), aberturaDe(id), meuId));
     paisTocados.add(chaveDoCanal(meta.paiId));
@@ -472,10 +514,41 @@ export function podeAbrirTopico(channelId: string): boolean {
   return lerTopico(channelId) === undefined && lerForum(channelId) === undefined;
 }
 
-/** O tópico já aberto sobre esta mensagem, se houver. Varre os tópicos conhecidos. */
+/** O tópico já aberto sobre esta mensagem, se houver. O(1) pelo índice. */
 export function topicoDaMensagem(channelId: string, messageId: string): string | undefined {
-  for (const [id, meta] of topicosConhecidos()) {
-    if (meta.paiId === channelId && meta.aberturaId === messageId) return id;
-  }
-  return undefined;
+  const id = topicoPorMensagem.peek(messageId);
+  if (id === undefined || id === null) return undefined;
+  return lerTopico(id)?.paiId === channelId ? id : undefined;
+}
+
+/**
+ * Carrega os tópicos ATIVOS e ARQUIVADOS de um canal, uma vez por canal.
+ *
+ * O `Ready` só traz ativos: sem os arquivados, a mensagem que abriu um tópico
+ * há meses perde a referência a ele. Cache por canal (a promessa, então
+ * chamadas concorrentes dividem a mesma ida à rede); falha limpa a entrada
+ * para a próxima abertura tentar de novo.
+ */
+const carregadosDoCanal = new Map<string, Promise<boolean>>();
+
+export function carregarTopicosDoCanal(canalId: string): Promise<boolean> {
+  const feito = carregadosDoCanal.get(canalId);
+  if (feito) return feito;
+  const serverId = client.channels.get(canalId)?.serverId;
+  if (serverId === undefined) return Promise.resolve(false);
+  const p = Promise.all([
+    carregarTopicos(serverId, { canal: canalId }),
+    carregarTopicos(serverId, { canal: canalId, arquivados: true }),
+  ]).then(([a, b]) => {
+    const ok = a && b;
+    if (!ok) carregadosDoCanal.delete(canalId);
+    return ok;
+  });
+  carregadosDoCanal.set(canalId, p);
+  return p;
+}
+
+/** Só para testes e para o fim da sessão. */
+export function limparTopicosCarregados(): void {
+  carregadosDoCanal.clear();
 }

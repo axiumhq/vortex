@@ -19,6 +19,7 @@ import {
 } from "nucleo/store/preferenciasDeVoz";
 import { definirSegurando, lerSegurando, microfoneAberto } from "nucleo/store/pushToTalk";
 import type { Dispositivo, ResultadoDeConta } from "nucleo/sdk/perfil";
+import { dispensarToast, lerToasts } from "nucleo/ui-logica/toastStore";
 
 import { comum, config } from "../../textos";
 import { aplicarTemaSalvo, definirFamilia, definirPersonalizacao, lerFamilia, lerPersonalizacao } from "../../tema/personalizado";
@@ -139,6 +140,14 @@ const SENHA_ERRADA: ResultadoDeConta = { ok: false, causa: "senhaIncorreta", mot
 
 beforeEach(async () => {
   await page.viewport(1280, 900);
+  // O ponteiro do Playwright não volta sozinho entre testes: ficava onde o anterior clicou (no
+  // cartão Floresta, por exemplo) e, quando a casca remontava por baixo dele, o Chrome mandava
+  // `mouseenter` sem movimento nenhum — a prévia abria espiando outro tema. Estaciona no canto.
+  const canto = document.createElement("div");
+  canto.style.cssText = "position:fixed;inset-block-start:0;inset-inline-start:0;inline-size:4px;block-size:4px";
+  document.body.append(canto);
+  await userEvent.hover(canto);
+  canto.remove();
   ctl.eu = { displayName: "Rafa", username: "rafa", pronomes: "", bio: "", avatarUrl: undefined };
   ctl.completo = { bio: "Oi, sou a Rafa", bannerUrl: undefined };
   ctl.email = "rafa@exemplo.com";
@@ -160,6 +169,12 @@ beforeEach(async () => {
 
 afterEach(() => {
   desmontar();
+  // O store de avisos é module-level e sobrevive ao `desmontar`: o próximo `<Avisos />` remonta
+  // os que sobraram, no canto inferior direito, por cima dos controles do fim da casca. Desde o
+  // Radix Toast 1.3 o viewport assenta numa transição, a camada do aviso registra DEPOIS da do
+  // diálogo e recebe `pointer-events: auto` — um aviso de erro do perfil (que não expira) passou a
+  // interceptar o clique num rádio de voz e vídeo três descrições adiante. Cada teste começa limpo.
+  for (const aviso of lerToasts()) dispensarToast(aviso.id);
   limparConfig();
   limparMeuStatus();
   definirSegurando(false);

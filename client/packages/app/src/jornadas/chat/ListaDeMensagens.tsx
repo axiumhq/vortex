@@ -11,6 +11,7 @@ import {
   proximaMencao,
   idsDeMencao,
 } from "nucleo/sdk/adapter";
+import { topicoDaMensagem } from "nucleo/sdk/topicos";
 import { assinarAparencia, lerAparencia } from "nucleo/store/aparencia";
 import { assinarDensidade, lerDensidade } from "nucleo/store/densidade";
 import { useChannelMessageIds } from "nucleo/store/hooks";
@@ -25,10 +26,12 @@ import {
   ALTURA_DO_DIVISOR,
   ALTURA_DO_DIVISOR_DE_NOVAS,
   ALTURA_DO_ESTADO_DE_ENVIO,
+  ALTURA_DO_RESUMO_DE_TOPICO,
   ALTURA_ESTIMADA,
   LIMIAR_DE_FIM,
   LIMIAR_DE_LONGE,
   LIMIAR_DE_PAGINACAO,
+  alturaDaEnquete,
   alturaDoTipo,
   amostrarAltura,
   amostrarAlturaDeEmbeds,
@@ -47,6 +50,12 @@ export interface ListaDeMensagensProps {
   canalId: string;
   servidorId: string;
 }
+
+/**
+ * A mensagem abriu um tópico? Leitura SÍNCRONA do índice (O(1)): o virtualizador pergunta
+ * por linhas que ainda nem têm componente, então não dá para esperar um hook.
+ */
+const temTopico = (canalId: string, mensagemId: string) => topicoDaMensagem(canalId, mensagemId) !== undefined;
 
 /** Quanto tempo um salto espera a mensagem de destino aparecer na lista. */
 const PRAZO_DO_SALTO_PENDENTE_MS = 8000;
@@ -181,6 +190,8 @@ export function ListaDeMensagens({ canalId, servidorId }: ListaDeMensagensProps)
         (m.respostas.length > 0 ? ALTURA_DA_CITACAO : 0) +
         (m.reactions.length > 0 ? ALTURA_DAS_REACOES : 0) +
         (m.sendState !== "sent" ? ALTURA_DO_ESTADO_DE_ENVIO : 0) +
+        (m.enquete ? alturaDaEnquete(m.enquete.opcoes.length) : 0) +
+        (temTopico(m.channelId, ids[i] ?? "") ? ALTURA_DO_RESUMO_DE_TOPICO : 0) +
         alturaDeAnexos(m.anexos) +
         (previasLigadas ? alturaDeEmbeds(m.embeds) : 0)
       );
@@ -491,6 +502,8 @@ export function ListaDeMensagens({ canalId, servidorId }: ListaDeMensagensProps)
       m.primeiraNaoLida ||
       m.respostas.length > 0 ||
       m.reactions.length > 0 ||
+      m.enquete !== undefined ||
+      temTopico(m.channelId, String(item.key)) ||
       m.anexos.length > 0 ||
       (previasLigadas && m.embeds.length > 0) ||
       m.sendState !== "sent";

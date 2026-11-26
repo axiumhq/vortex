@@ -329,20 +329,13 @@ impl AbstractMessages for MongoDb {
         answers: &[String],
         all_answers: &[String],
     ) -> Result<()> {
-        // Duas atualizações e não uma: `$pull` e `$addToSet` no MESMO caminho
-        // (votar de novo na mesma resposta) é conflito de operador no Mongo.
-        // Cada uma é atômica; entre as duas, quem lê vê o voto retirado, que é
-        // o estado intermediário honesto de "trocando de resposta".
+        // Uma atualização só, e por isso atômica: o `$pull` sai das respostas
+        // NÃO escolhidas e o `$addToSet` entra nas escolhidas. Os caminhos são
+        // disjuntos, então não há conflito de operador — e votar de novo na
+        // mesma resposta é um `$addToSet` que não muda nada.
         let mut pull = Document::new();
-        for answer in all_answers {
+        for answer in all_answers.iter().filter(|a| !answers.contains(a)) {
             pull.insert(format!("poll.votes.{answer}"), user);
-        }
-
-        if !pull.is_empty() {
-            self.col::<Document>(COL)
-                .update_one(doc! { "_id": id }, doc! { "$pull": pull })
-                .await
-                .map_err(|_| create_database_error!("update_one", COL))?;
         }
 
         let mut add = Document::new();
@@ -350,11 +343,49 @@ impl AbstractMessages for MongoDb {
             add.insert(format!("poll.votes.{answer}"), user);
         }
 
+        let mut update = Document::new();
+        if !pull.is_empty() {
+            update.insert("$pull", pull);
+        }
         if !add.is_empty() {
-            self.col::<Document>(COL)
-                .update_one(doc! { "_id": id }, doc! { "$addToSet": add })
-                .await
-                .map_err(|_| create_database_error!("update_one", COL))?;
+            update.insert("$addToSet", add);
+        }
+        if update.is_empty() {
+            return Ok(());
+        }
+
+        // O filtro repete `Poll::is_open` dentro da escrita. A checagem do
+        // modelo lê a mensagem ANTES; sem isto um voto lido como "aberta"
+        // entraria depois de `end_poll` e mudaria um resultado já anunciado.
+        //
+        // ⚠ `Timestamp` não tem UMA forma no banco: o `insert_one` serializa
+        // em modo binário e grava milissegundos (`Int64`), um `$set` montado
+        // com `to_bson` grava a string ISO. A comparação do Mongo separa por
+        // tipo — `$gt` com string nunca casa um `Int64` —, então o prazo é
+        // conferido nas duas formas. Só com a string, nenhum voto entrava.
+        let now = Timestamp::now_utc();
+        let now_ms = now.duration_since(Timestamp::UNIX_EPOCH).whole_milliseconds() as i64;
+        let now_text = to_bson(&now).map_err(|_| create_database_error!("to_bson", COL))?;
+        let result = self
+            .col::<Document>(COL)
+            .update_one(
+                doc! {
+                    "_id": id,
+                    "poll": { "$exists": true },
+                    "poll.ended_at": { "$exists": false },
+                    "$or": [
+                        { "poll.expires_at": { "$exists": false } },
+                        { "poll.expires_at": { "$gt": now_ms } },
+                        { "poll.expires_at": { "$gt": now_text } },
+                    ],
+                },
+                update,
+            )
+            .await
+            .map_err(|_| create_database_error!("update_one", COL))?;
+
+        if result.matched_count == 0 {
+            return Err(create_error!(InvalidOperation));
         }
 
         Ok(())

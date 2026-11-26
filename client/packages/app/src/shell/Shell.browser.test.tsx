@@ -85,6 +85,31 @@ describe("Shell fixo", () => {
     expect(barra.textContent).toBe("Vortex");
     expect(barra.querySelectorAll("button, a, input, [tabindex]")).toHaveLength(0);
   });
+
+  it("mostra os controles do desktop e alterna maximizar/restaurar", async () => {
+    const acoes: string[] = [];
+    let estadoJanela: (estado: { maximizada: boolean; comFoco: boolean }) => void = () => undefined;
+    window.vortex = {
+      janela: (acao) => { acoes.push(acao); return Promise.resolve(); },
+      assinarJanela: (ouvinte) => {
+        estadoJanela = ouvinte;
+        ouvinte({ maximizada: false, comFoco: true });
+        return () => undefined;
+      },
+    };
+    try {
+      await page.viewport(1280, 800);
+      montarNaLargura(1280);
+      await page.getByRole("button", { name: shell.barraDeTitulo.minimizar }).click();
+      await page.getByRole("button", { name: shell.barraDeTitulo.maximizar }).click();
+      estadoJanela({ maximizada: true, comFoco: true });
+      await page.getByRole("button", { name: shell.barraDeTitulo.restaurar }).click();
+      await page.getByRole("button", { name: shell.barraDeTitulo.fechar }).click();
+      expect(acoes).toEqual(["minimizar", "maximizar", "restaurar", "fechar"]);
+    } finally {
+      delete window.vortex;
+    }
+  });
 });
 
 describe("Entrada e saída do palco", () => {
