@@ -2,7 +2,6 @@ import {
   AppWindow as LAppWindow,
   Archive as LArchive,
   ArchiveRestore as LArchiveRestore,
-  MessagesSquare as LMessagesSquare,
   ArrowLeft as LArrowLeft,
   AtSign as LAtSign,
   Ban as LBan,
@@ -24,6 +23,7 @@ import {
   File as LFile,
   Eye as LEye,
   MessageSquareDot as LMessageSquareDot,
+  MessagesSquare as LMessagesSquare,
   EyeOff as LEyeOff,
   Crown as LCrown,
   Ellipsis as LEllipsis,
@@ -137,6 +137,7 @@ export const Baixar = envolver(LDownload);
 export const Arquivo = envolver(LFile);
 export const Fixar = envolver(LPin);
 export const Desafixar = envolver(LPinOff);
+export const Topicos = envolver(LMessagesSquare);
 export const Alerta = envolver(LCircleAlert);
 export const Confirmado = envolver(LCircleCheck);
 export const Email = envolver(LMail);
@@ -159,8 +160,6 @@ export const Maximizar = envolver(LMaximize2);
 export const Restaurar = envolver(LMinimize2);
 export const Minimizar = envolver(LMinus);
 export const Mensagem = envolver(LMessageSquare);
-/** Tópico: a conversa que sai de uma mensagem. */
-export const Topico = envolver(LMessagesSquare);
 export const Arquivar = envolver(LArchive);
 export const Desarquivar = envolver(LArchiveRestore);
 export const Microfone = envolver(LMic);

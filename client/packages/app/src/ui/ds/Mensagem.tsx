@@ -2,7 +2,7 @@ import { memo, type MouseEvent, type ReactNode } from "react";
 
 import { chat, ds } from "../../textos";
 import { topico as textosDeTopico } from "../../textos/topico";
-import { Imagem, MaisHorizontal, Responder, Sorriso, Topico } from "../icones";
+import { Imagem, MaisHorizontal, Responder, Sorriso, Topicos } from "../icones";
 import { juntar } from "../juntar";
 import { Avatar } from "./Avatar";
 import { Botao } from "./Botao";
@@ -183,7 +183,7 @@ function MensagemBase({
             <Botao
               variante="fantasma"
               tamanho="sm"
-              icone={<Topico />}
+              icone={<Topicos />}
               aria-label={topicoAberto ? textosDeTopico.abrir : textosDeTopico.criar}
               onClick={onTopico}
             />

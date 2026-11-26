@@ -13,7 +13,7 @@ import { chat, comum } from "../../textos";
 import { topico as textosDeTopico } from "../../textos/topico";
 import { useAcaoDeTopico } from "../topicos/acaoDeTopico";
 import { Botao } from "../../ui/ds";
-import { Arroba, Copiar, Desafixar, Editar, Fixar, Lixeira, NaoLida, Responder, Sorriso, Topico } from "../../ui/icones";
+import { Arroba, Copiar, Desafixar, Editar, Fixar, Lixeira, NaoLida, Responder, Sorriso, Topicos } from "../../ui/icones";
 import { ConteudoDoDialogo, Dialogo, DialogoFechar } from "../../ui/primitivos/Dialogo";
 import {
   ConteudoDoMenuDeContexto,
@@ -133,7 +133,7 @@ function ConteudoDoMenu({ aoApagar }: { aoApagar: (id: string) => void }) {
             depoisDeFechar.current = topico.executar;
           }}
         >
-          <Topico /> {topico.aberto ? textosDeTopico.abrir : textosDeTopico.criar}
+          <Topicos /> {topico.aberto ? textosDeTopico.abrir : textosDeTopico.criar}
         </ItemDeMenuDeContexto>
       )}
       <ItemDeMenuDeContexto

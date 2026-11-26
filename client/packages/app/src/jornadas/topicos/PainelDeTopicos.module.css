@@ -1,0 +1,201 @@
+/* O painel de tópicos: ocupa a área da gaveta de membros enquanto está aberto. */
+.painel {
+  box-sizing: border-box;
+  block-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 0;
+  overflow: hidden;
+}
+.miolo {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  min-block-size: 0;
+}
+.miolo:focus-visible {
+  outline: 2px solid var(--vx-focus-ring);
+  outline-offset: -2px;
+}
+
+.cabeca {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vx-space-2);
+  padding: var(--vx-space-3) var(--vx-space-4);
+}
+.titulo {
+  margin: 0;
+  color: var(--vx-text-1);
+  font-size: var(--vx-type-title-size);
+  line-height: var(--vx-type-title-line);
+  font-weight: var(--vx-type-title-weight);
+}
+
+.recortes {
+  display: flex;
+  flex: none;
+  gap: var(--vx-space-1);
+  padding: 0 var(--vx-space-3) var(--vx-space-2);
+}
+.recorte {
+  padding: var(--vx-space-1) var(--vx-space-3);
+  border: 0;
+  border-radius: var(--vx-radius-sm);
+  background: transparent;
+  color: var(--vx-text-2);
+  font-family: var(--vx-font-sans);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+  cursor: pointer;
+}
+.recorte:hover {
+  background: var(--vx-state-hover);
+}
+.recorte[aria-selected="true"] {
+  background: var(--vx-state-selected);
+  color: var(--vx-text-1);
+  font-weight: 600;
+}
+.recorte:focus-visible {
+  outline: 2px solid var(--vx-focus-ring);
+  outline-offset: -2px;
+}
+
+.corpo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-block-size: 0;
+  border-block-start: 1px solid var(--vx-border-subtle);
+}
+
+/* A lista virtualizada: a rolagem é o único elemento com altura limitada. */
+.rolagem {
+  flex: 1;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+}
+.trilho {
+  position: relative;
+  inline-size: 100%;
+}
+.linha {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  box-sizing: border-box;
+  padding: var(--vx-space-1) var(--vx-space-2);
+}
+.ir {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--vx-space-1);
+  inline-size: 100%;
+  block-size: 100%;
+  min-inline-size: 0;
+  padding: var(--vx-space-1) var(--vx-space-3);
+  border: 0;
+  border-radius: var(--vx-radius-sm);
+  background: transparent;
+  color: var(--vx-text-1);
+  font-family: var(--vx-font-sans);
+  text-align: start;
+  cursor: pointer;
+}
+.ir:hover {
+  background: var(--vx-state-hover);
+}
+.ir:focus-visible {
+  outline: 2px solid var(--vx-focus-ring);
+  outline-offset: -2px;
+}
+.nome {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+  font-weight: 600;
+}
+.ir[data-arquivado] .nome {
+  color: var(--vx-text-2);
+}
+.meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--vx-space-2);
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-caption-size);
+  line-height: var(--vx-type-caption-line);
+}
+.hora {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Vazio e erro: texto curto no alto da área, com a saída ao lado. */
+.estado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--vx-space-2);
+  padding: var(--vx-space-5) var(--vx-space-4);
+}
+.estado p {
+  margin: 0;
+}
+.estadoTitulo {
+  color: var(--vx-text-1);
+  font-size: var(--vx-type-body-size);
+  line-height: var(--vx-type-body-line);
+  overflow-wrap: anywhere;
+}
+.estadoDica {
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+}
+
+/* Esqueleto: a forma de um item; só a opacidade anima. */
+.esqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-4);
+  padding: var(--vx-space-4);
+}
+.esqueletoLinha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-2);
+  animation: pulsar 1400ms ease-in-out infinite;
+}
+.esqueletoNome,
+.esqueletoMeta {
+  display: block;
+  block-size: 12px;
+  border-radius: var(--vx-radius-sm);
+  background: var(--vx-skeleton);
+}
+.esqueletoNome {
+  inline-size: 80%;
+}
+.esqueletoMeta {
+  inline-size: 45%;
+}
+@keyframes pulsar {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .esqueletoLinha {
+    animation: none;
+  }
+}

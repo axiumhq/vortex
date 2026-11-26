@@ -243,5 +243,6 @@ export const chat = {
     resultados: "Resultados",
     semResultado: (busca: string) => `Nenhum emoji para ${busca}.`,
     carregando: "Carregando emojis…",
+    falhaAoCarregar: "Não foi possível carregar os emojis.",
   },
 } as const;

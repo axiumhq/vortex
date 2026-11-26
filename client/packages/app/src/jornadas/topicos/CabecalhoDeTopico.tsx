@@ -5,7 +5,7 @@ import { useChannel, useTopico } from "nucleo/store/hooks";
 
 import { topico as textos } from "../../textos/topico";
 import { Botao } from "../../ui/ds";
-import { Arquivar, Desarquivar, SetaEsquerda, Topico } from "../../ui/icones";
+import { Arquivar, Desarquivar, SetaEsquerda, Topicos } from "../../ui/icones";
 import { voltarAoPai } from "./acoes";
 import css from "./Topico.module.css";
 
@@ -39,7 +39,7 @@ export function CabecalhoDeTopico({ topicoId }: { topicoId: string }) {
         }}
       />
       <h2 className={css.nome}>
-        <Topico className={css.icone} aria-hidden="true" />
+        <Topicos className={css.icone} aria-hidden="true" />
         <span className={css.texto}>{t.nome}</span>
       </h2>
       {nomeDoPai !== undefined && <p className={css.pai}>{textos.cabecalho.em(nomeDoPai)}</p>}

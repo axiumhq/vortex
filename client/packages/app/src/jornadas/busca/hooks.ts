@@ -1,5 +1,6 @@
 import { abrirBusca, assinarBusca, fecharBusca, lerBusca, type EstadoDeBusca } from "nucleo/store/busca";
 import { fecharFixados, lerFixados } from "nucleo/store/fixados";
+import { fecharPainelDeTopicos, lerPainelDeTopicos } from "nucleo/store/painelDeTopicos";
 import { useEffect, useSyncExternalStore } from "react";
 
 import { devolverFoco, ehMac, lembrarOrigemDoFoco, pedirFocoNoCampo } from "./foco";
@@ -14,8 +15,9 @@ export function useBusca(): EstadoDeBusca {
  * a gaveta: abrir uma fecha a outra (e então a origem do foco já está guardada).
  */
 export function abrirBuscaDoCanal(canalId: string, servidorId: string): void {
-  if (!lerFixados().aberto && !lerBusca().aberta) lembrarOrigemDoFoco();
+  if (!lerFixados().aberto && !lerBusca().aberta && !lerPainelDeTopicos().aberto) lembrarOrigemDoFoco();
   fecharFixados();
+  fecharPainelDeTopicos();
   abrirBusca(canalId, servidorId === "" ? undefined : servidorId);
 }
 

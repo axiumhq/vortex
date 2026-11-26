@@ -15,16 +15,49 @@
 
 export type ContagemDeCanal = { readonly naoLidas: number; readonly mencoes: number };
 
+/** O que o rollup precisa saber de um tópico — `undefined` é canal comum. */
+export type InfoDeTopico = { readonly paiId: string; readonly seguindo: boolean };
+
+/**
+ * Quantas não-lidas de UM canal sobem para o servidor.
+ *
+ * Regra única, usada pela recontagem e pelo caminho incremental de
+ * `messageCreate` — os dois concordam porque perguntam a mesma coisa.
+ *
+ * ⚠ **Tópico só acende o servidor se a pessoa o SEGUE**, e o silêncio do canal
+ * PAI vale para ele: silenciar #produto silencia os tópicos de #produto. A
+ * menção não passa por aqui — atravessa o silêncio e o "não sigo", como no
+ * canal comum.
+ */
+export function naoLidasQueSobem(
+  naoLidas: number,
+  channelId: string,
+  serverId: string,
+  mudo: (channelId: string, serverId: string) => boolean,
+  topico?: InfoDeTopico,
+): number {
+  if (mudo(channelId, serverId)) return 0;
+  if (topico && (!topico.seguindo || mudo(topico.paiId, serverId))) return 0;
+  return naoLidas;
+}
+
 export function somarPorServidor(
   contagens: Iterable<readonly [string, ContagemDeCanal]>,
   servidorDe: (channelId: string) => string | undefined,
   mudo: (channelId: string, serverId: string) => boolean,
+  topico?: (channelId: string) => InfoDeTopico | undefined,
 ): Map<string, { naoLidas: number; mencoes: number }> {
   const soma = new Map<string, { naoLidas: number; mencoes: number }>();
   for (const [channelId, c] of contagens) {
     const serverId = servidorDe(channelId);
     if (!serverId) continue;
-    const naoLidas = mudo(channelId, serverId) ? 0 : c.naoLidas;
+    const naoLidas = naoLidasQueSobem(
+      c.naoLidas,
+      channelId,
+      serverId,
+      mudo,
+      topico?.(channelId),
+    );
     if (naoLidas === 0 && c.mencoes === 0) continue;
     const atual = soma.get(serverId);
     if (atual) {
