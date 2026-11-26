@@ -55,7 +55,24 @@ function achaJargao(texto: string): string | undefined {
 }
 
 /** Nomes próprios e teclas que podem aparecer com maiúscula no meio da frase. */
-const PERMITIDAS = new Set(["Vortex", "Enter", "Esc", "Shift", "Ctrl", "Alt", "Tab", "Ana", "E-mail"]);
+const PERMITIDAS = new Set([
+  "Vortex",
+  "Enter",
+  "Esc",
+  "Shift",
+  "Ctrl",
+  "Alt",
+  "Tab",
+  "Ana",
+  "E-mail",
+  "Windows",
+  "Ubuntu",
+  "Debian",
+  "Arch",
+  "Linux",
+  "GitHub",
+  "SmartScreen",
+]);
 
 /** Devolve a primeira palavra que quebra a caixa de frase, se houver. */
 function quebraCaixaDeFrase(texto: string): string | undefined {

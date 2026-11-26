@@ -176,6 +176,16 @@ jobs:
           for f in entrega/*.zip; do
             [ -e "$f" ] && mv "$f" entrega/Vortex-linux.zip
           done
+          # Checksums SHA-256 separados por plataforma para que os dois jobs
+          # da matriz nunca sobrescrevam o arquivo um do outro na release.
+          (
+            cd entrega
+            if [ "${{ matrix.plataforma }}" = "linux" ]; then
+              sha256sum Vortex.deb Vortex.pkg.tar.zst Vortex-linux.zip > SHA256SUMS-linux.txt
+            else
+              sha256sum *.exe > SHA256SUMS-windows.txt
+            fi
+          )
           ls -la entrega/
           if [ -z "$(ls -A entrega)" ]; then
             echo "::error::Nenhum artefato foi produzido — o maker desta" \
