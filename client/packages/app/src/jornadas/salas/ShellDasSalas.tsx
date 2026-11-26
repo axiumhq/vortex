@@ -1,5 +1,6 @@
 import { fecharBusca } from "nucleo/store/busca";
 import { fecharFixados } from "nucleo/store/fixados";
+import { fecharPainelDeTopicos } from "nucleo/store/painelDeTopicos";
 import { lerUltimoServidor, abrirServidor } from "nucleo/store/ultimoLugar";
 import { useColunaDeSalas, useLocal, useProntidao, useServerIds } from "nucleo/store/hooks";
 import { useEffect, useRef, type ReactNode } from "react";
@@ -11,6 +12,8 @@ import { PainelDeBusca } from "../busca/PainelDeBusca";
 import { useFixados } from "../fixados/hooks";
 import { PainelDeFixados } from "../fixados/PainelDeFixados";
 import { AreaConectada } from "./AreaConectada";
+import { usePainelDeTopicos } from "../topicos/hooks";
+import { PainelDeTopicos } from "../topicos/PainelDeTopicos";
 import { ColunaConectada } from "./ColunaConectada";
 import { ConteudoDaDock } from "./DockConectada";
 import { FaixaDeSalas } from "./FaixaDeSalas";
@@ -62,7 +65,14 @@ export function ShellDasSalas({ rodapeDasSalas }: { rodapeDasSalas?: ReactNode }
   }, [fixados.aberto, fixados.channelId, canalAtual]);
   const fixadosVisiveis =
     fixados.aberto && canalAtual !== undefined && fixados.channelId === canalAtual && !palcoAberto;
-  const painelAberto = buscaVisivel || fixadosVisiveis;
+  const topicosAberto = usePainelDeTopicos();
+  // Idem: a lista de tópicos é do canal em que foi aberta.
+  useEffect(() => {
+    if (topicosAberto.aberto && topicosAberto.channelId !== canalAtual) fecharPainelDeTopicos();
+  }, [topicosAberto.aberto, topicosAberto.channelId, canalAtual]);
+  const topicosVisiveis =
+    topicosAberto.aberto && canalAtual !== undefined && topicosAberto.channelId === canalAtual && !palcoAberto;
+  const painelAberto = buscaVisivel || fixadosVisiveis || topicosVisiveis;
 
   return (
     <>
@@ -82,6 +92,8 @@ export function ShellDasSalas({ rodapeDasSalas }: { rodapeDasSalas?: ReactNode }
           <PainelDeBusca key={canalAtual} canalId={canalAtual} servidorId={serverId ?? ""} />
         ) : fixadosVisiveis ? (
           <PainelDeFixados key={canalAtual} canalId={canalAtual} servidorId={serverId ?? ""} />
+        ) : topicosVisiveis ? (
+          <PainelDeTopicos key={canalAtual} canalId={canalAtual} servidorId={serverId ?? ""} />
         ) : undefined
       }
       gavetaOculta={(pronto && serverId === undefined && !painelAberto) || palcoAberto}

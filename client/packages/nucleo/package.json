@@ -27,7 +27,7 @@
     "@livekit/track-processors": "0.8.2",
     "@sapphi-red/web-noise-suppressor": "0.4.1",
     "@solid-primitives/set": "^0.7.4",
-    "@tanstack/react-virtual": "3.14.19",
+    "@tanstack/react-virtual": "3.14.25",
     "livekit-client": "^2.22.1",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",

@@ -1,0 +1,14 @@
+/* Os tópicos seguidos: a mesma lista de itens de canal, recuada sob o pai. */
+.aninhados {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-1);
+  margin: 0;
+  padding: var(--vx-space-1) 0 0 var(--vx-space-4);
+  list-style: none;
+}
+.aninhados > li {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
