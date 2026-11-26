@@ -1,4 +1,4 @@
-import { useTemTopicos } from "nucleo/store/hooks";
+import { useForum, useTemTopicos, useTopico } from "nucleo/store/hooks";
 
 import { topicos } from "../../textos";
 import { Botao } from "../../ui/ds";
@@ -13,7 +13,10 @@ import { abrirTopicosDoCanal, fecharTopicosDevolvendoFoco, usePainelDeTopicos } 
 export function BotaoDeTopicos({ canalId }: { canalId: string }) {
   const temTopicos = useTemTopicos();
   const estado = usePainelDeTopicos();
-  if (!temTopicos) return null;
+  // Dentro de um tópico (ou de um fórum) a lista não tem o que listar: o canal já é o filho.
+  const ehTopico = useTopico(canalId) !== undefined;
+  const ehForum = useForum(canalId) !== null;
+  if (!temTopicos || ehTopico || ehForum) return null;
   const aberto = estado.aberto && estado.channelId === canalId;
   return (
     <Botao

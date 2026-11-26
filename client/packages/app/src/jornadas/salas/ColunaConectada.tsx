@@ -17,7 +17,7 @@ import {
 	useServer,
 	useServidorAtivo,
 	useTemTopicos,
-	useTopicosSeguidosPorPai,
+	useTopicosSeguidosDoServidor,
 	type PessoaNaSala,
 } from "nucleo/store/hooks";
 import type { CategoriaDeCanais } from "nucleo/sdk/domain";
@@ -249,7 +249,7 @@ function ListaDoServidor({ serverId }: { serverId: string }) {
 	const semSala = emVoz.length === 0;
 	// Só com a função anunciada: sem ela o mapa nem é consultado.
 	const temTopicos = useTemTopicos();
-	const seguidosPorPai = useTopicosSeguidosPorPai();
+	const seguidosPorPai = useTopicosSeguidosDoServidor(serverId, temTopicos);
 	if (semSala && emTexto.length === 0) {
 		return (
 			<ServidorSemSalas serverId={serverId} canalParaConvite={emTexto[0]} />

@@ -3,7 +3,7 @@ import { quando } from "nucleo/lib/quando";
 import { carregarTopicosDoCanal } from "nucleo/sdk/topicos";
 import { useMinutoAtual, useTopico, useTopicosDoCanal, useTopicosDoServidor } from "nucleo/store/hooks";
 import { abrirTexto } from "nucleo/store/ultimoLugar";
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { topicos as t } from "../../textos";
 import { Botao, PainelVidro } from "../../ui/ds";
@@ -76,6 +76,29 @@ export function PainelDeTopicos({ canalId, servidorId }: { canalId: string; serv
   const [recorte, setRecorte] = useState<Recorte>("ativos");
   const [carga, setCarga] = useState<Carga>("carregando");
   const [tentativa, setTentativa] = useState(0);
+  const idDoPainel = useId();
+  const RECORTES = ["ativos", "arquivados"] as const;
+
+  /** Trocar de recorte volta ao topo: o scroll de uma lista não vale para a outra. */
+  const escolher = (r: Recorte) => {
+    if (rolagem.current) rolagem.current.scrollTop = 0;
+    setRecorte(r);
+  };
+  /** Padrão ARIA de abas: ←/→ movem a seleção e o foco, e Home/End vão às pontas. */
+  const aoTeclarNasAbas = (e: KeyboardEvent<HTMLElement>) => {
+    const i = RECORTES.indexOf(recorte);
+    const proximo =
+      e.key === "ArrowRight" ? RECORTES[(i + 1) % RECORTES.length]
+      : e.key === "ArrowLeft" ? RECORTES[(i + RECORTES.length - 1) % RECORTES.length]
+      : e.key === "Home" ? RECORTES[0]
+      : e.key === "End" ? RECORTES[RECORTES.length - 1]
+      : undefined;
+    if (proximo === undefined) return;
+    e.preventDefault();
+    e.stopPropagation();
+    escolher(proximo);
+    e.currentTarget.querySelector<HTMLElement>(`[data-recorte='${proximo}']`)?.focus();
+  };
 
   const doCanal = useTopicosDoCanal(canalId);
   const ativosDoServidor = useTopicosDoServidor(servidorId, "ativos");
@@ -207,23 +230,34 @@ export function PainelDeTopicos({ canalId, servidorId }: { canalId: string; serv
             onClick={fecharTopicosDevolvendoFoco}
           />
         </div>
-        <div className={css.recortes} role="tablist" aria-label={t.recortes.rotulo}>
-          {(["ativos", "arquivados"] as const).map((r) => (
+        <div className={css.recortes} role="tablist" aria-label={t.recortes.rotulo} onKeyDown={aoTeclarNasAbas}>
+          {RECORTES.map((r) => (
             <button
               key={r}
+              id={`${idDoPainel}-aba-${r}`}
               type="button"
               role="tab"
+              data-recorte={r}
               className={css.recorte}
               aria-selected={recorte === r}
+              aria-controls={`${idDoPainel}-painel`}
+              tabIndex={recorte === r ? 0 : -1}
               onClick={() => {
-                setRecorte(r);
+                escolher(r);
               }}
             >
               {t.recortes[r]}
             </button>
           ))}
         </div>
-        <div className={css.corpo}>{corpo}</div>
+        <div
+          id={`${idDoPainel}-painel`}
+          role="tabpanel"
+          aria-labelledby={`${idDoPainel}-aba-${recorte}`}
+          className={css.corpo}
+        >
+          {corpo}
+        </div>
       </div>
     </PainelVidro>
   );

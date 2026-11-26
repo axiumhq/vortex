@@ -4,7 +4,9 @@ import { SERVER_ID, seed } from "nucleo/arnes/firehose";
 import { definirCanalAberto } from "nucleo/sdk/adapter";
 import { definirFuncoesDoArnes } from "nucleo/sdk/funcoes";
 import { escreverTopico, lerTopico, topicosConhecidos, type MetaDeTopico } from "nucleo/sdk/vortexCanal";
+import { useTopicosSeguidosDoServidor } from "nucleo/store/hooks";
 import { limparConexao } from "nucleo/store/conexao";
+import { definirPalco, fecharPalco, lerPalco } from "nucleo/store/palcoDeVoz";
 import { limparBusca } from "nucleo/store/busca";
 import { limparFixados } from "nucleo/store/fixados";
 import { irPara, lerLocal } from "nucleo/store/navegacao";
@@ -51,6 +53,7 @@ beforeEach(async () => {
   limparBusca();
   limparFixados();
   limparPainelDeTopicos();
+  fecharPalco();
   definirFuncoesDoArnes(["threads"]);
   definirProntidao(true);
   irPara(SERVER_ID, GERAL);
@@ -58,6 +61,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   desmontar();
+  fecharPalco();
   for (const [id, meta] of originais) escreverTopico(id, meta);
   limparPainelDeTopicos();
   limparFixados();
@@ -109,6 +113,13 @@ describe("o botão", () => {
     await expect.poll(() => painel()).toBeNull();
   });
 
+  it("fica ausente dentro de um tópico: o canal já é o filho", async () => {
+    irPara(SERVER_ID, idDo(REVISAO));
+    definirCanalAberto(idDo(REVISAO));
+    await abrir();
+    expect(document.querySelector(`[aria-label='${topicos.botao}']`)).toBeNull();
+  });
+
   it("Esc fecha e devolve o foco ao botão", async () => {
     await abrir();
     await botao().click();
@@ -152,6 +163,21 @@ describe("o painel", () => {
       .toBe(idDo(BITRATE));
     // O painel é do canal em que foi aberto: trocar de canal o fecha.
     await expect.poll(() => painel()).toBeNull();
+  });
+
+  it("abas: tabpanel ligado à aba, setas trocam o recorte e o scroll volta ao topo", async () => {
+    await abrir();
+    await botao().click();
+    await expect.poll(() => itens().length).toBeGreaterThan(0);
+    const painelDeAbas = pegar("[role='tabpanel']")!;
+    expect(painelDeAbas.getAttribute("aria-labelledby")).toBe(aba(topicos.recortes.ativos).element().id);
+
+    aba(topicos.recortes.ativos).element().focus();
+    await userEvent.keyboard("{ArrowRight}");
+    await expect.poll(() => aba(topicos.recortes.arquivados).element().getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(aba(topicos.recortes.arquivados).element());
+    await userEvent.keyboard("{ArrowLeft}");
+    await expect.poll(() => aba(topicos.recortes.ativos).element().getAttribute("aria-selected")).toBe("true");
   });
 
   it("vazio: diz que não há tópico no recorte", async () => {
@@ -210,6 +236,21 @@ describe("os seguidos na coluna", () => {
     expect(seguidos()).toBeNull();
   });
 
+  it("com o palco aberto, clicar no seguido fecha o palco e mostra o tópico", async () => {
+    await abrir();
+    await expect.poll(() => seguidos()).not.toBeNull();
+    definirPalco({ tipo: "grade" });
+    expect(lerPalco().tipo).toBe("grade");
+    await page.getByRole("button", { name: REVISAO }).click();
+    await expect.poll(() => lerPalco().tipo).toBe("fechado");
+    await expect
+      .poll(() => {
+        const local = lerLocal();
+        return local.tipo === "servidor" ? local.channelId : undefined;
+      })
+      .toBe(idDo(REVISAO));
+  });
+
   it("clicar no seguido abre o tópico", async () => {
     await abrir();
     await expect.poll(() => seguidos()).not.toBeNull();
@@ -235,5 +276,41 @@ describe("a lista é virtualizada", () => {
     await botao().click();
     await expect.poll(() => itens().length).toBeGreaterThan(5);
     expect(itens().length).toBeLessThan(60);
+  });
+});
+
+/* Lei nº 1: a coluna de um servidor não acorda por tópico de outro. */
+describe("a leitura dos seguidos é escopada por servidor", () => {
+  function Sonda({ serverId, ativo, aoLer }: { serverId: string; ativo: boolean; aoLer: (m: unknown) => void }) {
+    aoLer(useTopicosSeguidosDoServidor(serverId, ativo));
+    return null;
+  }
+  const modelo = () => lerTopico(idDo(REVISAO))!;
+
+  it("seguir um tópico de OUTRO servidor não re-renderiza quem lê este", async () => {
+    const lidos: unknown[] = [];
+    montar(<Sonda serverId={SERVER_ID} ativo aoLer={(m) => lidos.push(m)} />);
+    await expect.poll(() => lidos.length).toBeGreaterThan(0);
+    const antes = lidos.length;
+    const mapa = lidos[lidos.length - 1];
+
+    escreverTopico("01JQ0000000000000000OUTRO1", { ...modelo(), serverId: "OUTRO", nome: "De outro servidor" });
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    expect(lidos.length).toBe(antes);
+    expect(lidos[lidos.length - 1]).toBe(mapa);
+
+    // Controle positivo: um seguido NESTE servidor acorda a leitura.
+    escreverTopico("01JQ0000000000000000AQUI01", { ...modelo(), nome: "Deste servidor" });
+    await expect.poll(() => lidos.length).toBeGreaterThan(antes);
+  });
+
+  it("desligada (servidor sem a função), nada acorda a leitura", async () => {
+    const lidos: unknown[] = [];
+    montar(<Sonda serverId={SERVER_ID} ativo={false} aoLer={(m) => lidos.push(m)} />);
+    await expect.poll(() => lidos.length).toBeGreaterThan(0);
+    const antes = lidos.length;
+    escreverTopico("01JQ0000000000000000AQUI02", { ...modelo(), nome: "Também deste servidor" });
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    expect(lidos.length).toBe(antes);
   });
 });

@@ -1,4 +1,5 @@
 import { useCanalAtivo, useChannel, useTopico } from "nucleo/store/hooks";
+import { fecharPalco } from "nucleo/store/palcoDeVoz";
 import { abrirTexto } from "nucleo/store/ultimoLugar";
 import { memo } from "react";
 
@@ -27,6 +28,8 @@ const TopicoSeguido = memo(function TopicoSeguido({ serverId, id }: { serverId: 
         naoLida={(canal?.naoLidas ?? 0) > 0 && !silenciado}
         mencoes={silenciado ? 0 : (canal?.mencoes ?? 0)}
         onClick={() => {
+          // Ler outro canal fecha o palco, como o canal comum faz; a chamada segue no widget.
+          fecharPalco();
           abrirTexto(serverId, id);
         }}
       />
