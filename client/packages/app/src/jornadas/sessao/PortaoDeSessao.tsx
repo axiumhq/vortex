@@ -125,6 +125,9 @@ export function PortaoDeSessao({
     />
   );
 
+  // A página pública não espera a restauração da sessão nem depende de estar desconectado.
+  if (tela.tipo === "download") return entrada(false);
+
   // O link do e-mail abre onde o e-mail está, e isso pode ser uma aba já com sessão: a tela do
   // link vale mais que o app, senão o token de uso único se perderia em silêncio.
   if (sessao.estado === "dentro" && (tela.tipo === "verificar" || tela.tipo === "redefinir")) {

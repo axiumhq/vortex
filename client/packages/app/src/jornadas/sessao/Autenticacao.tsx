@@ -14,6 +14,7 @@ import { sessao as textos } from "../../textos";
 import { TelaDeConferirEmail } from "./TelaDeConferirEmail";
 import { TelaDeConvite } from "./TelaDeConvite";
 import { TelaDeCriarConta } from "./TelaDeCriarConta";
+import { TelaDeDownload } from "./TelaDeDownload";
 import { TelaDeEntrada } from "./TelaDeEntrada";
 import { TelaDeQr } from "./TelaDeQr";
 import { TelaDeRecuperarSenha } from "./TelaDeRecuperarSenha";
@@ -244,11 +245,9 @@ export function Autenticacao({ entrando, causa, motivo, aoEntrar }: Autenticacao
         }}
       />
     ),
-    // Fora da v1: exclusão de conta por link e a página de download do desktop. Cair na entrada
-    // é honesto (não há tela), e perder o link em silêncio num caso raro custa menos que um
-    // controle sem destino.
+    // Fora da v1: exclusão de conta por link.
     excluir: () => entrar(),
-    download: () => entrar(),
+    download: () => <TelaDeDownload />,
   };
 
   return TELA[tela.tipo]();
