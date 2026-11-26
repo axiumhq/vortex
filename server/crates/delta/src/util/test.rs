@@ -463,7 +463,11 @@ impl TestHarness {
     }
 
     pub async fn wait_for_message(&mut self, channel_id: &str) -> v0::Message {
-        dbg!(&self.event_buffer);
+        // Só tópico e tipos: o conteúdo dos eventos traz conta e sessão.
+        eprintln!(
+            "esperando mensagem em `{channel_id}`.\n{}",
+            self.resumo_da_espera(channel_id)
+        );
 
         match self
             .wait_for_event(channel_id, |event| match event {
