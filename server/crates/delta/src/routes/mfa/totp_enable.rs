@@ -26,7 +26,10 @@ pub async fn totp_enable(
 
 #[cfg(test)]
 mod tests {
-    use crate::{rocket, util::test::TestHarness};
+    use crate::{
+        rocket,
+        util::test::{totp_code_estavel, TestHarness},
+    };
     use revolt_database::{MFATicket, Totp};
     use rocket::http::{ContentType, Header, Status};
     use revolt_models::v0;
@@ -50,7 +53,8 @@ mod tests {
 
         let secret = res.into_json::<v0::ResponseTotpSecret>().await.unwrap().secret;
 
-        let code = Totp::Enabled { secret }.generate_code().unwrap();
+        let totp = Totp::Enabled { secret };
+        let code = totp_code_estavel(&totp).await;
 
         let res = harness.client
             .put("/auth/mfa/totp")
@@ -61,6 +65,9 @@ mod tests {
             .await;
 
         assert_eq!(res.status(), Status::NoContent);
+
+        // Código novo para o login: o de cima pode ter vencido na virada do passo.
+        let code = totp_code_estavel(&totp).await;
 
         let res = harness.client
             .post("/auth/session/login")

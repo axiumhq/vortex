@@ -25,6 +25,32 @@ use serde::{Deserialize, Serialize};
 /// Quanto `wait_for_event` espera antes de reprovar o teste.
 const ESPERA_POR_EVENTO: Duration = Duration::from_secs(10);
 
+/// Folga mínima, em segundos, que um código TOTP gerado em teste precisa ter
+/// até o fim do passo de 30 s.
+const FOLGA_DO_PASSO_TOTP: u64 = 5;
+
+/// Gera o código TOTP do instante atual, esperando a virada do passo quando
+/// restar pouco dele.
+///
+/// O produto valida só o passo corrente, sem tolerância. Um código gerado no
+/// fim de um passo e checado depois da virada falha de forma intermitente, então
+/// o teste só o gera com folga para ser checado dentro do mesmo passo. Gere de
+/// novo a cada uso: um código guardado de um passo anterior também é inválido.
+pub async fn totp_code_estavel(totp: &revolt_database::Totp) -> String {
+    let passo: u64 = 30; // `totp_lite::DEFAULT_STEP`, usado por `Totp::generate_code`
+    let agora = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("relógio depois da época")
+        .as_secs();
+    let restante = passo - agora % passo;
+
+    if restante <= FOLGA_DO_PASSO_TOTP {
+        tokio::time::sleep(Duration::from_secs(restante + 1)).await;
+    }
+
+    totp.generate_code().expect("código TOTP")
+}
+
 /// Só o campo `type` de um evento, lido do JSON cru.
 ///
 /// A mensagem de falha da espera lista os TIPOS recebidos e nunca o conteúdo:
