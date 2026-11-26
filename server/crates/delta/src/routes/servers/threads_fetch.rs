@@ -94,3 +94,97 @@ pub async fn fetch_threads(
         message_counts,
     }))
 }
+
+#[cfg(test)]
+mod test {
+    use crate::util::test::TestHarness;
+    use revolt_database::{Channel, Member, PartialChannel};
+    use revolt_models::v0;
+    use revolt_permissions::{ChannelPermission, OverrideField};
+
+    async fn topico(harness: &TestHarness, pai: &Channel, dono: &str, nome: &str) -> Channel {
+        Channel::create_thread(
+            &harness.db,
+            pai,
+            dono,
+            v0::DataCreateThread {
+                name: nome.to_string(),
+                message: None,
+                tags: vec![],
+            },
+        )
+        .await
+        .expect("`Channel`")
+    }
+
+    /// Tópico de canal que a pessoa não vê não aparece na listagem dela.
+    #[rocket::async_test]
+    async fn filtra_por_permissao_de_ver() {
+        let harness = TestHarness::new().await;
+        let (_, owner_session, owner) = harness.new_user().await;
+        let (_, member_session, member) = harness.new_user().await;
+        let (server, channels) = harness.new_server(&owner).await;
+        Member::create(&harness.db, &server, &member, None)
+            .await
+            .expect("`Member`");
+
+        let mut privado = harness.new_channel(&server).await;
+        privado
+            .update(
+                &harness.db,
+                PartialChannel {
+                    default_permissions: Some(OverrideField {
+                        a: 0,
+                        d: ChannelPermission::ViewChannel as i64,
+                    }),
+                    ..Default::default()
+                },
+                vec![],
+            )
+            .await
+            .unwrap();
+
+        let aberto = topico(&harness, &channels[0], &owner.id, "Aberto").await;
+        let fechado = topico(&harness, &privado, &owner.id, "Fechado").await;
+
+        let do_membro = harness.list_threads(&member_session, &server.id, false).await;
+        assert_eq!(do_membro, vec![aberto.id().to_string()]);
+
+        let do_dono = harness.list_threads(&owner_session, &server.id, false).await;
+        assert_eq!(do_dono.len(), 2);
+        assert!(do_dono.iter().any(|id| id == fechado.id()));
+    }
+
+    /// `archived` separa os dois recortes: nenhum tópico aparece nos dois.
+    #[rocket::async_test]
+    async fn arquivado_separa_os_recortes() {
+        let harness = TestHarness::new().await;
+        let (_, session, owner) = harness.new_user().await;
+        let (server, channels) = harness.new_server(&owner).await;
+
+        let ativo = topico(&harness, &channels[0], &owner.id, "Ativo").await;
+        let mut arquivado = topico(&harness, &channels[0], &owner.id, "Arquivado").await;
+        let mut info = arquivado.thread().unwrap().clone();
+        info.archived = true;
+        arquivado
+            .update(
+                &harness.db,
+                PartialChannel {
+                    thread: Some(info),
+                    ..Default::default()
+                },
+                vec![],
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(
+            harness.list_threads(&session, &server.id, false).await,
+            vec![ativo.id().to_string()]
+        );
+        assert_eq!(
+            harness.list_threads(&session, &server.id, true).await,
+            vec![arquivado.id().to_string()]
+        );
+    }
+}
