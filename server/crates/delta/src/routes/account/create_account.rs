@@ -105,7 +105,10 @@ mod tests {
         drop(res);
 
         harness
-            .wait_for_event("global", |e| matches!(e, EventV1::CreateAccount { .. }))
+            .wait_for_event("global", |e| {
+                // `global` é compartilhado pelos testes em paralelo.
+                matches!(e, EventV1::CreateAccount { account } if account.email == "success@validemail.com")
+            })
             .await;
     }
 
