@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { join, resolve } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { describe, it } from "node:test";
 
 import { arquivoServido } from "../../scripts/caminhoServido.mjs";
@@ -26,10 +26,15 @@ describe("arquivoServido", () => {
       "/assets/../../segredo.txt",
       "/%2e%2e/segredo.txt",
       "/..%2f..%2fsegredo.txt",
-      "/..%5c..%5csegredo.txt",
     ]) {
       assert.equal(arquivoServido(RAIZ, url), undefined, url);
     }
+  });
+
+  it("barra invertida: separador no Windows, caractere de nome no POSIX, nunca fora da pasta", () => {
+    const r = arquivoServido(RAIZ, "/..%5c..%5csegredo.txt");
+    if (sep === "\\") assert.equal(r, undefined);
+    else assert.ok(r?.arquivo.startsWith(RAIZ + sep));
   });
 
   it("recusa a pasta irmã com o mesmo prefixo", () => {
