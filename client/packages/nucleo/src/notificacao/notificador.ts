@@ -7,6 +7,7 @@ import { abrirConversa, irPara } from "../store/navegacao";
 import { lerNotificacoes } from "../store/notificacoes";
 import {
   estaSilenciado,
+  nivelDoCanal,
   nivelEfetivo,
   opcoesDoServidor,
   servidorSilenciado,
@@ -193,8 +194,9 @@ export function notificarMensagem(
   const opcoes = m.serverId ? opcoesDoServidor(m.serverId) : undefined;
   const entrega = decidirEntrega(m, {
     prefs,
-    nivel: nivelEfetivo(m.channelId, m.serverId),
-    silenciado: estaSilenciado(m.channelId),
+    /* Tópico herda do canal pai o que não tem por conta própria. */
+    nivel: nivelDoCanal(m.channelId) ?? nivelEfetivo(m.paiId ?? m.channelId, m.serverId),
+    silenciado: estaSilenciado(m.channelId) || (m.paiId ? estaSilenciado(m.paiId) : false),
     servidorSilenciado: m.serverId ? servidorSilenciado(m.serverId) : false,
     suprimirTodos: opcoes?.suprimirTodos ?? false,
     suprimirCargos: opcoes?.suprimirCargos ?? false,
