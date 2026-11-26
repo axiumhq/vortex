@@ -109,6 +109,8 @@ function ehRotaDaSpa(caminho) {
   return !caminho.startsWith("/assets/") && !caminho.startsWith("/api");
 }
 
+const INDEX = join(RAIZ, "index.html");
+
 const servidor = createServer((req, res) => {
   /* Fora da pasta servida, ou URL malformada: 403, e o servidor segue de pé. */
   const caminho = caminhoDoPedido(req.url);
@@ -117,20 +119,19 @@ const servidor = createServer((req, res) => {
     return;
   }
   /* `resolve` e a guarda AQUI, junto do `readFileSync`: é o ponto que precisa dela. */
-  let arquivo = resolve(RAIZ, `.${sep}${caminho}`);
-  if (arquivo === RAIZ) arquivo = join(RAIZ, "index.html");
-  if (!dentroDe(RAIZ, arquivo)) {
+  const resolvido = resolve(RAIZ, `.${sep}${caminho}`);
+  const pedido = resolvido === RAIZ ? INDEX : resolvido;
+  if (!dentroDe(RAIZ, pedido)) {
     res.writeHead(403).end();
     return;
   }
-  if (!existsSync(arquivo) || statSync(arquivo).isDirectory()) {
-    if (!ehRotaDaSpa(caminho)) {
-      res.writeHead(404, { "Content-Type": "text/plain" });
-      res.end(`nao existe em ${SAIDA}: ${caminho}\n`);
-      return;
-    }
-    arquivo = join(RAIZ, "index.html");
+  const existe = existsSync(pedido) && !statSync(pedido).isDirectory();
+  if (!existe && !ehRotaDaSpa(caminho)) {
+    res.writeHead(404, { "Content-Type": "text/plain" });
+    res.end(`nao existe em ${SAIDA}: ${caminho}\n`);
+    return;
   }
+  const arquivo = existe ? pedido : INDEX;
 
   try {
     res.writeHead(200, {
