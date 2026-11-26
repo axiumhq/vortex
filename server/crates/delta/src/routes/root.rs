@@ -11,8 +11,12 @@ use std::collections::HashMap;
 /// servidor não tem.
 pub const FUNCAO_POLLS: &str = "polls";
 
+/// Tópicos: `POST /channels/:id/threads`, `PATCH /channels/:id/thread`,
+/// `PUT/DELETE /channels/:id/follow` e `GET /servers/:id/threads`.
+pub const FUNCAO_TOPICOS: &str = "threads";
+
 /// Funções do Vortex que este servidor suporta.
-pub const FUNCOES_VORTEX: &[&str] = &[FUNCAO_POLLS];
+pub const FUNCOES_VORTEX: &[&str] = &[FUNCAO_POLLS, FUNCAO_TOPICOS];
 
 /// # hCaptcha Configuration
 #[derive(Serialize, JsonSchema, Debug)]
@@ -344,6 +348,7 @@ mod test {
             serde_json::from_str(&response.into_string().await.unwrap()).unwrap();
         let funcoes = corpo["features"]["vortex"].as_array().unwrap();
         assert!(funcoes.iter().any(|f| f == "polls"));
+        assert!(funcoes.iter().any(|f| f == "threads"));
     }
 
     #[rocket::async_test]

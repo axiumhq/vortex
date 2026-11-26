@@ -1,0 +1,47 @@
+/*
+  A altura desta linha entra em `ALTURA_DO_RESUMO_DE_TOPICO` (`alturas.ts`):
+  mexer em `block-size` ou na margem pede remedir lá. O teste de navegador
+  compara a constante com a caixa real.
+*/
+.resumo {
+  display: flex;
+  align-items: center;
+  gap: var(--vx-space-2);
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  block-size: 24px;
+  margin-block-start: var(--vx-space-2);
+  padding-inline: var(--vx-space-2);
+  border: 0;
+  border-radius: var(--vx-radius-sm);
+  background: transparent;
+  color: var(--vx-text-2);
+  font: inherit;
+  font-size: var(--vx-type-caption-size);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.resumo:hover {
+  background: var(--vx-state-hover);
+}
+.resumo:active {
+  background: var(--vx-state-press);
+}
+.resumo:focus-visible {
+  outline: 2px solid var(--vx-accent);
+  outline-offset: -2px;
+}
+
+.destaque {
+  flex: none;
+  color: var(--vx-accent);
+  font-weight: 600;
+}
+
+.nome {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--vx-text-3);
+}
