@@ -89,6 +89,12 @@ verificar_integridade() {
   ok "Integridade confirmada (SHA-256: ${obtido%????????????????????????????????????????????????}…)"
 }
 
+# Escapa o caminho do executável segundo a especificação Desktop Entry (Exec),
+# para ser envolvido em aspas duplas preservando espaços e caracteres reservados.
+escapar_exec_desktop() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/`/\\`/g; s/\$/\\$/g'
+}
+
 como_root() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
@@ -121,10 +127,18 @@ else
 fi
 
 tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
+estagio=""
+limpar() {
+  rm -rf "$tmp"
+  [ -n "$estagio" ] && rm -rf "$estagio"
+}
+trap limpar EXIT INT TERM HUP
 
 passo 1 "Baixando $PACOTE para $DISTRO..."
 baixar "$BASE/$PACOTE" "$tmp/$PACOTE" 1
+# Permite leitura pelo usuário _apt no Debian/Ubuntu sem aviso de permissão.
+chmod 755 "$tmp"
+chmod 644 "$tmp/$PACOTE"
 
 passo 2 "Verificando integridade (SHA-256)..."
 if baixar "$BASE/$CHECKSUMS_ARQUIVO" "$tmp/$CHECKSUMS_ARQUIVO" 0; then
@@ -138,35 +152,55 @@ fi
 passo 3 "Instalando o Vortex..."
 case "$MODO" in
   arch)
-    como_root pacman -U --noconfirm "$tmp/$PACOTE"
+    como_root pacman -U --noconfirm "$tmp/$PACOTE" </dev/null
     ;;
   debian)
-    como_root apt-get install -y "$tmp/$PACOTE"
+    como_root apt-get install -y "$tmp/$PACOTE" </dev/null
     ;;
   zip)
-    destino="${XDG_DATA_HOME:-$HOME/.local/share}/vortex-desktop"
+    dados_dir="${XDG_DATA_HOME:-$HOME/.local/share}"
+    destino="$dados_dir/vortex-desktop"
     bin_dir="$HOME/.local/bin"
-    apps_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    apps_dir="$dados_dir/applications"
 
-    mkdir -p "$tmp/extraido" "$bin_dir" "$apps_dir"
+    mkdir -p "$tmp/extraido" "$dados_dir" "$bin_dir" "$apps_dir"
     unzip -q "$tmp/$PACOTE" -d "$tmp/extraido"
 
     binario=$(find "$tmp/extraido" -maxdepth 3 -type f -name "vortex-desktop" | head -n 1)
     [ -n "$binario" ] || erro "Não achei o executável 'vortex-desktop' dentro do .zip."
     raiz_app=$(dirname "$binario")
 
-    rm -rf "$destino"
-    mkdir -p "$destino"
-    cp -a "$raiz_app"/. "$destino/"
-    chmod +x "$destino/vortex-desktop"
+    # Monta em diretório irmão e troca atomicamente para preservar a instalação
+    # anterior caso a cópia ou substituição falhe.
+    estagio=$(mktemp -d "$dados_dir/.vortex-desktop.XXXXXX")
+    cp -a "$raiz_app"/. "$estagio/"
+    chmod +x "$estagio/vortex-desktop"
+
+    backup=""
+    if [ -e "$destino" ]; then
+      backup="$dados_dir/.vortex-desktop.backup.$$"
+      rm -rf "$backup"
+      mv "$destino" "$backup"
+    fi
+
+    if mv "$estagio" "$destino"; then
+      estagio=""
+      [ -n "$backup" ] && rm -rf "$backup"
+    else
+      if [ -n "$backup" ] && [ -e "$backup" ]; then
+        mv "$backup" "$destino" || true
+      fi
+      erro "Não foi possível substituir $destino; a instalação anterior foi preservada."
+    fi
 
     ln -sf "$destino/vortex-desktop" "$bin_dir/vortex-desktop"
 
+    exec_escapado=$(escapar_exec_desktop "$destino/vortex-desktop")
     cat > "$apps_dir/vortex-desktop.desktop" <<EOF
 [Desktop Entry]
 Name=Vortex
 Comment=Chat de voz e texto em tempo real
-Exec=$destino/vortex-desktop %U
+Exec="$exec_escapado" %U
 Terminal=false
 Type=Application
 Categories=Network;Chat;
