@@ -22,8 +22,10 @@
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { extname, join, normalize, resolve } from "node:path";
+import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { caminhoDoPedido, dentroDe } from "./caminhoServido.mjs";
 
 const AQUI = fileURLToPath(new URL(".", import.meta.url));
 const CASCA = resolve(AQUI, "..");
@@ -107,26 +109,29 @@ function ehRotaDaSpa(caminho) {
   return !caminho.startsWith("/assets/") && !caminho.startsWith("/api");
 }
 
+const INDEX = join(RAIZ, "index.html");
+
 const servidor = createServer((req, res) => {
-  const caminho = decodeURIComponent((req.url ?? "/").split("?")[0]);
-
-  /* `normalize` antes de juntar: sem isso `/../` sai da pasta servida. */
-  const pedido = join(RAIZ, normalize(caminho));
-  const dentro = pedido.startsWith(RAIZ);
-
-  let arquivo = pedido;
-  if (!dentro) {
+  /* Fora da pasta servida, ou URL malformada: 403, e o servidor segue de pé. */
+  const caminho = caminhoDoPedido(req.url);
+  if (caminho === undefined) {
     res.writeHead(403).end();
     return;
   }
-  if (!existsSync(arquivo) || statSync(arquivo).isDirectory()) {
-    if (!ehRotaDaSpa(caminho)) {
-      res.writeHead(404, { "Content-Type": "text/plain" });
-      res.end(`nao existe em ${SAIDA}: ${caminho}\n`);
-      return;
-    }
-    arquivo = join(RAIZ, "index.html");
+  /* `resolve` e a guarda AQUI, junto do `readFileSync`: é o ponto que precisa dela. */
+  const resolvido = resolve(RAIZ, `.${sep}${caminho}`);
+  const pedido = resolvido === RAIZ ? INDEX : resolvido;
+  if (!dentroDe(RAIZ, pedido)) {
+    res.writeHead(403).end();
+    return;
   }
+  const existe = existsSync(pedido) && !statSync(pedido).isDirectory();
+  if (!existe && !ehRotaDaSpa(caminho)) {
+    res.writeHead(404, { "Content-Type": "text/plain" });
+    res.end(`nao existe em ${SAIDA}: ${caminho}\n`);
+    return;
+  }
+  const arquivo = existe ? pedido : INDEX;
 
   try {
     res.writeHead(200, {
