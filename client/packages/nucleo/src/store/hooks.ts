@@ -723,6 +723,37 @@ export function useTopicosSeguidosPorPai(): ReadonlyMap<
   }, [ids]);
 }
 
+/**
+ * Os seguidos de UM servidor, agrupados pelo canal pai.
+ *
+ * Escopado por servidor (lei nº 1): `useTopicosSeguidosPorPai` assina a chave
+ * global, então seguir ou largar um tópico de outro servidor re-renderizava
+ * a coluna deste. Aqui a assinatura é a do recorte `servidor:<id>:seguindo`.
+ * `ativo` desliga a leitura (servidor que não anuncia tópicos): assina uma
+ * chave que ninguém publica, e o mapa fica vazio e estável.
+ */
+const SEM_CHAVE = "sem-topicos";
+const SEM_SEGUIDOS: ReadonlyMap<string, readonly string[]> = new Map();
+
+export function useTopicosSeguidosDoServidor(
+  serverId: string,
+  ativo: boolean,
+): ReadonlyMap<string, readonly string[]> {
+  const ids = useListaDeTopicos(ativo ? chaveDoServidor(serverId, "seguindo") : SEM_CHAVE);
+  return useMemo(() => {
+    if (!ativo || ids.length === 0) return SEM_SEGUIDOS;
+    const por = new Map<string, string[]>();
+    for (const id of ids) {
+      const t = topicos.getSnapshot(id);
+      if (!t) continue;
+      const lista = por.get(t.paiId);
+      if (lista) lista.push(id);
+      else por.set(t.paiId, [id]);
+    }
+    return por;
+  }, [ids, ativo]);
+}
+
 /** `null` para canal que não é fórum nem galeria. */
 export function useForum(channelId: string): ForumSnapshot | null {
   const getSnapshot = () => foruns.getSnapshot(channelId) ?? null;
