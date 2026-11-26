@@ -1771,6 +1771,16 @@ export function startAdapter() {
 
   client.on("channelDelete", (channel) => {
     const serverId = channel.serverId;
+    /*
+      A contagem some com o canal — ANTES do retorno antecipado: tópico não
+      está em `canaisPorServidor`, e sem isto a não lida dele ficava presa no
+      rollup do servidor para sempre.
+    */
+    seguidoConhecido.delete(channel.id);
+    if (contagemPorCanal.delete(channel.id)) {
+      if (serverId) recontarServidores();
+      else reemitirConversas();
+    }
     if (!serverId) {
       publicarConversas();
       return;
@@ -3438,6 +3448,12 @@ const seguidoConhecido = new Map<string, boolean>();
 assinarMetaDeCanal((ids) => {
   let mudou = false;
   for (const id of ids) {
+    /* Tópico que sumiu do registro: esquecer, e não gravar "não sigo". Quem
+       zera a contagem é o `channelDelete`, e o registro sai ANTES dele. */
+    if (lerTopico(id) === undefined) {
+      seguidoConhecido.delete(id);
+      continue;
+    }
     const seguindo = infoDeTopico(id)?.seguindo ?? false;
     if (seguidoConhecido.get(id) === seguindo) continue;
     seguidoConhecido.set(id, seguindo);
@@ -3758,7 +3774,7 @@ function zerarContagem(channelId: string): void {
 
   contagemPorCanal.delete(channelId);
 
-  if (client.channels.get(channelId)?.serverId) recontarServidores();
+  if (servidorDoCanal(channelId)) recontarServidores();
   else reemitirConversas();
 
   reemitirCanal(channelId);
@@ -3849,7 +3865,7 @@ export async function marcarTodosLidos(
 /** Zera a contagem de um canal sem escrever no servidor. */
 function zerarLocalmente(channelId: string): void {
   if (!contagemPorCanal.delete(channelId)) return;
-  if (client.channels.get(channelId)?.serverId) recontarServidores();
+  if (servidorDoCanal(channelId)) recontarServidores();
   else {
     reemitirTotais();
     reemitirConversas();
@@ -4101,7 +4117,7 @@ function avisarChegada(message: Message): void {
   notificarMensagem({
     mensagemId: message.id,
     channelId: message.channelId,
-    serverId: canal?.serverId,
+    serverId: canal?.serverId ?? topico?.serverId,
     tipoDoCanal: tipo === "DirectMessage" ? "dm" : tipo === "Group" ? "grupo" : "servidor",
     ...(topico ? { ehTopico: true, paiId: topico.paiId } : {}),
     autorNome: message.masquerade?.name ?? message.author?.displayName ?? "Alguém",

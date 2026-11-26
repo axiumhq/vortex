@@ -100,7 +100,8 @@ Módulos do `nucleo` que o `app` ainda não usa e que ficaram de propósito.
 Os módulos de eventos e enquete já são usados pelo `app` e não aparecem acima.
 Os de tópicos (`sdk/topicos`, `sdk/vortexCanal`, hooks de `store/hooks`) estão
 no `nucleo` e já alimentam o aviso de não lidas do servidor no rail; as telas
-de tópico no `app` são a próxima etapa da onda 4 (seção abaixo). Cerca de 40 outros módulos sem uso previsto foram apagados junto com os
+de tópico no `app` são a próxima etapa da onda 4 (seção acima).
+Cerca de 40 outros módulos sem uso previsto foram apagados junto com os
 testes (histórico no git, commit desta entrega).
 
 ## Dívidas abertas

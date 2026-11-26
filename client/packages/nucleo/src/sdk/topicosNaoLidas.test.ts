@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SERVER_ID, seed } from "../arnes/firehose";
 import { definirCanalAberto, servers, usuarioLocalId } from "./adapter";
 import { client } from "./client";
-import { anotarCanais, escreverTopico, lerTopico } from "./vortexCanal";
+import { anotarCanais, aplicarEventoCru, escreverTopico, lerTopico } from "./vortexCanal";
 import { limparSilencio } from "../store/silencio";
 
 /**
@@ -58,6 +58,7 @@ function definirSeguindo(id: string, seguindo: boolean) {
 }
 
 beforeEach(async () => {
+  pendentes.length = 0;
   vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
     pendentes.push(cb);
     return pendentes.length;
@@ -106,5 +107,36 @@ describe("tópicos no rollup do servidor, pelo adapter", () => {
 
     definirSeguindo(t, false);
     expect(servidor().naoLidas).toBe(base);
+  });
+
+  it("marcar como lido um tópico FORA de client.channels atualiza o servidor", () => {
+    const base = servidor().naoLidas;
+    n += 1;
+    const id = `01JQ00000000000000000H${String(n).padStart(4, "0")}`;
+    /* Só o registro: o SDK ainda não hidratou este canal. */
+    anotarCanais([cru(id, [usuarioLocalId()!])]);
+    expect(client.channels.get(id)).toBeUndefined();
+    mensagem(id);
+    expect(servidor().naoLidas).toBe(base + 1);
+
+    definirCanalAberto(id);
+    expect(servidor().naoLidas).toBe(base);
+  });
+
+  it("apagar um tópico seguido com não lidas zera o servidor", () => {
+    const base = servidor();
+    const id = novoTopico(true);
+    mensagem(id);
+    mensagem(id, `<@${usuarioLocalId()}>`);
+    expect(servidor().naoLidas).toBe(base.naoLidas + 2);
+    expect(servidor().mencoes).toBe(base.mencoes + 1);
+
+    /* A ordem real: o registro de tópicos sai ANTES do evento do SDK. */
+    const canal = client.channels.get(id)!;
+    aplicarEventoCru({ type: "ChannelDelete", id });
+    client.emit("channelDelete", canal as never);
+
+    expect(servidor().naoLidas).toBe(base.naoLidas);
+    expect(servidor().mencoes).toBe(base.mencoes);
   });
 });
