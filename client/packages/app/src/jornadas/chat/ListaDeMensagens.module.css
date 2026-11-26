@@ -188,3 +188,12 @@
   flex: 1;
   min-block-size: 0;
 }
+
+/*
+  A caixa que se mede para o `scrollMargin`. `flow-root` contém a margem do conteúdo
+  (o card tem `margin-bottom`): sem ela a margem colapsa para fora do `offsetHeight` e
+  o virtualizador erra a posição das linhas pelo tamanho da margem.
+*/
+.caixaDoTopo {
+  display: flow-root;
+}

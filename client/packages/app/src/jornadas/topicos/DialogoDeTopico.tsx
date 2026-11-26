@@ -57,6 +57,9 @@ function Formulario({ alvo }: { alvo: AlvoDoDialogo }) {
     const id = await criarTopico(alvo.canalId, limpo.slice(0, MAXIMO_DO_NOME), { mensagemId: alvo.mensagemId });
     setEnviando(false);
     if (id === undefined) return;
+    // Fechado (ou trocado de mensagem) enquanto a criação voava: o tópico existe,
+    // mas a pessoa desistiu de ir até ele, e navegar agora seria um salto sem pedido.
+    if (lerDialogoDeTopico() !== alvo) return;
     fecharDialogoDeTopico();
     abrirTopico(id);
   };

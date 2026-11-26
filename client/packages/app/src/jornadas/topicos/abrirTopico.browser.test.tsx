@@ -389,6 +389,69 @@ describe("seguir e arquivar", () => {
   });
 });
 
+describe("revisão", () => {
+  it("o scrollMargin é a altura que o card ocupa de fato, margem de baixo incluída", async () => {
+    await abrirApp();
+    const topicoId = topicoDaMensagem(CHANNEL_ID, ids()[17]!)!;
+    const respostas: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      const id = ulidDoInstante(Date.now() - (12 - i) * 60_000 - 7)!;
+      client.messages.getOrCreate(
+        id,
+        { _id: id, channel: topicoId, author: usuarioLocalId(), content: `outra resposta ${String(i)}` } as never,
+        false,
+      );
+      respostas.push(id);
+    }
+    seedChannel(topicoId, respostas);
+    irPara(SERVER_ID, topicoId);
+    await expect.poll(() => log().querySelector("[data-raiz-do-topico]")).not.toBeNull();
+    const caixa = () => log().querySelector<HTMLElement>("[data-margem]")!;
+    const card = () => log().querySelector<HTMLElement>("[data-raiz-do-topico]")!;
+    // O espaço reservado vai do topo do card até onde a primeira linha começa (o medidor).
+    const ocupado = () => caixa().nextElementSibling!.getBoundingClientRect().top - card().getBoundingClientRect().top;
+    await expect.poll(() => Math.abs(Number(caixa().dataset.margem) - ocupado())).toBeLessThanOrEqual(1);
+    expect(Number(caixa().dataset.margem)).toBeGreaterThan(card().offsetHeight);
+  });
+
+  it("fechar o diálogo com a criação em voo não navega quando ela termina", async () => {
+    await abrirApp();
+    const alvo = ids()[34]!;
+    const novo = ulidDoInstante(Date.now() - 11)!;
+    let responder!: (v: unknown) => void;
+    vi.spyOn(client.api, "post").mockImplementation((() => new Promise((r) => (responder = r))));
+
+    const m = await abrirMenuDe(alvo);
+    [...m.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((el) => el.textContent.includes(topico.criar))!.click();
+    await expect.element(page.getByRole("textbox", { name: topico.dialogo.rotuloDoNome })).toBeVisible();
+    await page.getByRole("button", { name: topico.dialogo.confirmar }).click();
+    await page.getByRole("button", { name: "Cancelar" }).click();
+    await expect.poll(() => page.getByRole("dialog").query()).toBeNull();
+
+    responder({
+      _id: novo,
+      channel_type: "TextChannel",
+      server: SERVER_ID,
+      name: "tarde demais",
+      thread: { parent: CHANNEL_ID, owner: usuarioLocalId(), message: alvo, archived: false, tags: [], followers: [] },
+    });
+    await expect.poll(() => topicos.peek(novo)).toBeDefined();
+    await quadros(4);
+    expect(lerCanalAtivo()).toBe(CHANNEL_ID);
+    expect(areaDoTopico()).toBeNull();
+  });
+
+  it("arquivado sem poder escrever: o aviso é de leitura, sem prometer que responder reabre", async () => {
+    ctl.negadas.add("enviar");
+    await abrirApp();
+    const topicoId = topicoDaMensagem(CHANNEL_ID, ids()[17]!)!;
+    expect(topicos.peek(topicoId)?.arquivado).toBe(true);
+    irPara(SERVER_ID, topicoId);
+    await expect.element(page.getByRole("status").filter({ hasText: topico.arquivadoSomenteLeitura })).toBeVisible();
+    expect(document.body.textContent).not.toContain(topico.arquivado);
+  });
+});
+
 /* Por último: apagar tira a mensagem do canal e desloca `ids()` para os testes seguintes. */
 describe("origem apagada com o tópico aberto", () => {
   it("o card vira 'mensagem apagada' na hora, e o que se lia não salta", async () => {

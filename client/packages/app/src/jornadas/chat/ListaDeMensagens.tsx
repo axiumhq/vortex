@@ -554,7 +554,9 @@ export function ListaDeMensagens({ canalId, servidorId, topo }: ListaDeMensagens
     // Sem mensagens o topo continua no topo, e o estado ocupa o resto.
     return (
       <div className={css.vazioComTopo}>
-        <div ref={caixaDoTopo}>{topo}</div>
+        <div ref={caixaDoTopo} className={css.caixaDoTopo} data-margem={margem}>
+          {topo}
+        </div>
         <div className={css.estadoAbaixoDoTopo}>{estado}</div>
       </div>
     );
@@ -632,7 +634,11 @@ export function ListaDeMensagens({ canalId, servidorId, topo }: ListaDeMensagens
           className={css.rolagem}
         >
           <div className={css.coluna}>
-            {topo !== undefined && <div ref={caixaDoTopo}>{topo}</div>}
+            {topo !== undefined && (
+              <div ref={caixaDoTopo} className={css.caixaDoTopo} data-margem={margem}>
+                {topo}
+              </div>
+            )}
             <div ref={medidor} className={css.medidor} style={{ blockSize: `${virtualizer.getTotalSize()}px` }}>
               {itens.map((item) => (
                 <div

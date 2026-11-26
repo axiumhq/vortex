@@ -33,4 +33,5 @@ export const topico = {
   },
 
   arquivado: "Este tópico está arquivado. Responder aqui o reabre.",
+  arquivadoSomenteLeitura: "Este tópico está arquivado. Você pode ler, mas não responder.",
 } as const;

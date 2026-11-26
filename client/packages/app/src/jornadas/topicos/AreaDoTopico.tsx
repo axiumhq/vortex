@@ -1,5 +1,5 @@
 import { carregarTopicosDoCanal, podeAbrirTopico } from "nucleo/sdk/topicos";
-import { useTemTopicos, useTopico } from "nucleo/store/hooks";
+import { usePode, useTemTopicos, useTopico } from "nucleo/store/hooks";
 import { useEffect } from "react";
 
 import { topico as textos } from "../../textos/topico";
@@ -23,6 +23,8 @@ import css from "./Topico.module.css";
 export function AreaDoTopico({ topicoId, servidorId }: { topicoId: string; servidorId: string }) {
   useAtalhoDeBusca(topicoId, servidorId);
   const arquivado = useTopico(topicoId)?.arquivado === true;
+  // "Responder o reabre" só é verdade para quem pode responder.
+  const podeResponder = usePode(topicoId, "enviar");
   return (
     <div className={css.area} data-topico-aberto={topicoId}>
       <CabecalhoDeTopico topicoId={topicoId} />
@@ -34,7 +36,7 @@ export function AreaDoTopico({ topicoId, servidorId }: { topicoId: string; servi
           aviso={
             arquivado ? (
               <p className={css.avisoDeArquivado} role="status">
-                {textos.arquivado}
+                {podeResponder ? textos.arquivado : textos.arquivadoSomenteLeitura}
               </p>
             ) : undefined
           }
