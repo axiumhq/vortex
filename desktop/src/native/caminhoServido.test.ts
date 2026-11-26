@@ -2,21 +2,27 @@ import assert from "node:assert/strict";
 import { join, resolve, sep } from "node:path";
 import { describe, it } from "node:test";
 
-import { arquivoServido } from "../../scripts/caminhoServido.mjs";
+import { caminhoDoPedido, dentroDe } from "../../scripts/caminhoServido.mjs";
 
 const RAIZ = resolve("/tmp/casca/dist-casca");
 
-describe("arquivoServido", () => {
+/** A mesma composição de `casca-com-cliente-local.mjs`. */
+function servido(url: string | undefined): string | undefined {
+  const caminho = caminhoDoPedido(url);
+  if (caminho === undefined) return undefined;
+  const arquivo = resolve(RAIZ, `.${sep}${caminho}`);
+  return dentroDe(RAIZ, arquivo) ? arquivo : undefined;
+}
+
+describe("caminho servido pela casca", () => {
   it("serve arquivo dentro da pasta, sem a querystring", () => {
-    assert.deepEqual(arquivoServido(RAIZ, "/assets/app.js?v=1"), {
-      caminho: "/assets/app.js",
-      arquivo: join(RAIZ, "assets", "app.js"),
-    });
+    assert.equal(caminhoDoPedido("/assets/app.js?v=1"), "/assets/app.js");
+    assert.equal(servido("/assets/app.js?v=1"), join(RAIZ, "assets", "app.js"));
   });
 
   it("a raiz é a própria pasta", () => {
-    assert.equal(arquivoServido(RAIZ, "/")?.arquivo, RAIZ);
-    assert.equal(arquivoServido(RAIZ, undefined)?.arquivo, RAIZ);
+    assert.equal(servido("/"), RAIZ);
+    assert.equal(servido(undefined), RAIZ);
   });
 
   it("recusa subir para fora da pasta, inclusive codificado", () => {
@@ -27,26 +33,27 @@ describe("arquivoServido", () => {
       "/%2e%2e/segredo.txt",
       "/..%2f..%2fsegredo.txt",
     ]) {
-      assert.equal(arquivoServido(RAIZ, url), undefined, url);
+      assert.equal(servido(url), undefined, url);
     }
   });
 
   it("barra invertida: separador no Windows, caractere de nome no POSIX, nunca fora da pasta", () => {
-    const r = arquivoServido(RAIZ, "/..%5c..%5csegredo.txt");
+    const r = servido("/..%5c..%5csegredo.txt");
     if (sep === "\\") assert.equal(r, undefined);
-    else assert.ok(r?.arquivo.startsWith(RAIZ + sep));
+    else assert.ok(r?.startsWith(RAIZ + sep));
   });
 
   it("recusa a pasta irmã com o mesmo prefixo", () => {
-    assert.equal(arquivoServido(RAIZ, "/../dist-casca-outra/x.js"), undefined);
+    assert.equal(servido("/../dist-casca-outra/x.js"), undefined);
+    assert.equal(dentroDe(RAIZ, `${RAIZ}-outra`), false);
   });
 
   it("URL malformada e byte nulo não lançam: viram recusa", () => {
-    assert.equal(arquivoServido(RAIZ, "/%E0%A4%A"), undefined);
-    assert.equal(arquivoServido(RAIZ, "/index.html%00.js"), undefined);
+    assert.equal(caminhoDoPedido("/%E0%A4%A"), undefined);
+    assert.equal(caminhoDoPedido("/index.html%00.js"), undefined);
   });
 
   it("`..` que não sai da pasta continua servido", () => {
-    assert.equal(arquivoServido(RAIZ, "/assets/../index.html")?.arquivo, join(RAIZ, "index.html"));
+    assert.equal(servido("/assets/../index.html"), join(RAIZ, "index.html"));
   });
 });
