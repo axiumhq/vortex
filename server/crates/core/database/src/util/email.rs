@@ -220,10 +220,8 @@ pub fn send_email(
     match sender.send(&m) {
         Ok(_) => Ok(()),
         Err(error) => {
-            error!(
-                "Failed to send email to {}!\nlettre error: {}",
-                address, error
-            );
+            // Sem o endereço: e-mail é dado pessoal e não vai para o log.
+            error!("Failed to send email!\nlettre error: {}", error);
 
             revolt_config::capture_error(&error);
 
