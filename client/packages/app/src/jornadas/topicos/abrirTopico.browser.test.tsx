@@ -221,17 +221,17 @@ describe("criar a partir da mensagem", () => {
     )!;
     item.click();
 
-    const campo = page.getByRole("textbox", { name: topico.dialogo.rotuloDoNome });
+    const campo = page.getByRole("dialog").getByRole("textbox", { name: topico.dialogo.rotuloDoNome });
     await expect.element(campo).toHaveValue(nomeDeTopicoDe(conteudo));
     expect(campo.element().getAttribute("maxlength")).toBe("100");
 
     await campo.clear();
-    await page.getByRole("button", { name: topico.dialogo.confirmar }).click();
+    await page.getByRole("dialog").getByRole("button", { name: topico.dialogo.confirmar }).click();
     await expect.element(page.getByRole("dialog").getByRole("alert")).toHaveTextContent(topico.dialogo.nomeObrigatorio);
     expect(post).not.toHaveBeenCalled();
 
     await campo.fill("Plano de lançamento");
-    await page.getByRole("button", { name: topico.dialogo.confirmar }).click();
+    await page.getByRole("dialog").getByRole("button", { name: topico.dialogo.confirmar }).click();
 
     await expect.poll(() => lerCanalAtivo()).toBe(novo);
     expect(post).toHaveBeenCalledWith(`/channels/${CHANNEL_ID}/threads`, {
@@ -303,7 +303,7 @@ describe("abrir e voltar", () => {
     await expect.element(page.getByRole("status").filter({ hasText: topico.arquivado })).toBeVisible();
     expect(pegar("textarea")).not.toBeNull();
 
-    await page.getByRole("button", { name: /^Voltar para #/ }).click();
+    await cabecalhoDoTopico().getByRole("button", { name: /^Voltar para #/ }).click();
     await expect.poll(() => lerCanalAtivo()).toBe(CHANNEL_ID);
     await expect.poll(() => areaDoTopico()).toBeNull();
     // A linha que estava no topo continua à vista, e a lista NÃO foi para o fim.
@@ -351,7 +351,7 @@ describe("seguir e arquivar", () => {
 
     const del = vi.spyOn(client.api, "delete").mockResolvedValue(undefined);
     const put = vi.spyOn(client.api, "put").mockResolvedValue(undefined);
-    const seguir = page.getByRole("button", { name: topico.cabecalho.seguir });
+    const seguir = cabecalhoDoTopico().getByRole("button", { name: topico.cabecalho.seguir });
     // O arnês semeia "eu" entre os seguidores.
     await expect.element(seguir).toHaveAttribute("aria-pressed", "true");
     await seguir.click();
@@ -365,12 +365,12 @@ describe("seguir e arquivar", () => {
       .spyOn(client.api, "patch")
       .mockImplementation(((_rota: string, corpo: { archived: boolean }) =>
         Promise.resolve(cru(topicoId, { archived: corpo.archived }))) as never);
-    await page.getByRole("button", { name: topico.cabecalho.arquivar }).click();
+    await cabecalhoDoTopico().getByRole("button", { name: topico.cabecalho.arquivar }).click();
     expect(patch).toHaveBeenCalledWith(`/channels/${topicoId}/thread`, { archived: true });
     await expect.element(cabecalhoDoTopico()).toHaveTextContent(topico.cabecalho.arquivado);
     await expect.element(page.getByRole("status").filter({ hasText: topico.arquivado })).toBeVisible();
 
-    await page.getByRole("button", { name: topico.cabecalho.reabrir }).click();
+    await cabecalhoDoTopico().getByRole("button", { name: topico.cabecalho.reabrir }).click();
     expect(patch).toHaveBeenLastCalledWith(`/channels/${topicoId}/thread`, { archived: false });
     await expect.poll(() => topicos.peek(topicoId)?.arquivado).toBe(false);
   });
@@ -382,10 +382,10 @@ describe("seguir e arquivar", () => {
     expect(topicos.peek(topicoId)?.donoId).not.toBe(usuarioLocalId());
     irPara(SERVER_ID, topicoId);
     await expect.poll(() => areaDoTopico()?.dataset.topicoAberto).toBe(topicoId);
-    await expect.element(page.getByRole("button", { name: topico.cabecalho.seguir })).toBeVisible();
+    await expect.element(cabecalhoDoTopico().getByRole("button", { name: topico.cabecalho.seguir })).toBeVisible();
     await quadros(2);
-    expect(page.getByRole("button", { name: topico.cabecalho.arquivar }).query()).toBeNull();
-    expect(page.getByRole("button", { name: topico.cabecalho.reabrir }).query()).toBeNull();
+    expect(cabecalhoDoTopico().getByRole("button", { name: topico.cabecalho.arquivar }).query()).toBeNull();
+    expect(cabecalhoDoTopico().getByRole("button", { name: topico.cabecalho.reabrir }).query()).toBeNull();
   });
 });
 
@@ -423,9 +423,9 @@ describe("revisão", () => {
 
     const m = await abrirMenuDe(alvo);
     [...m.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((el) => el.textContent.includes(topico.criar))!.click();
-    await expect.element(page.getByRole("textbox", { name: topico.dialogo.rotuloDoNome })).toBeVisible();
-    await page.getByRole("button", { name: topico.dialogo.confirmar }).click();
-    await page.getByRole("button", { name: "Cancelar" }).click();
+    await expect.element(page.getByRole("dialog").getByRole("textbox", { name: topico.dialogo.rotuloDoNome })).toBeVisible();
+    await page.getByRole("dialog").getByRole("button", { name: topico.dialogo.confirmar }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Cancelar" }).click();
     await expect.poll(() => page.getByRole("dialog").query()).toBeNull();
 
     responder({
