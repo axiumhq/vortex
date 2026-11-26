@@ -25,6 +25,20 @@ use serde::{Deserialize, Serialize};
 /// Quanto `wait_for_event` espera antes de reprovar o teste.
 const ESPERA_POR_EVENTO: Duration = Duration::from_secs(10);
 
+/// Só o campo `type` de um evento, lido do JSON cru.
+///
+/// A mensagem de falha da espera lista os TIPOS recebidos e nunca o conteúdo:
+/// eventos carregam conta, sessão e e-mail, e logar isso — mesmo em teste — é
+/// vazamento de dado em texto claro.
+#[derive(Deserialize)]
+struct TipoDeEvento {
+    #[serde(rename = "type")]
+    tipo: String,
+}
+
+/// Um evento recebido: tópico, tipo (para diagnóstico) e o evento decodificado.
+type Recebido = (String, String, EventV1);
+
 pub struct TestHarness {
     pub client: Client,
     pub db: Database,
@@ -32,10 +46,12 @@ pub struct TestHarness {
     /// Mantido vivo pelo tempo do harness: soltá-lo encerra a assinatura.
     _sub: SubscriberClient,
     /// Eventos já decodificados, drenados do Redis por uma tarefa própria.
-    eventos: mpsc::UnboundedReceiver<(String, EventV1)>,
+    eventos: mpsc::UnboundedReceiver<Recebido>,
     /// Mensagens que o canal de broadcast do `fred` descartou por atraso.
     perdidos: Arc<AtomicU64>,
     event_buffer: Vec<(String, EventV1)>,
+    /// Tópico e tipo de cada evento em `event_buffer`, sem o conteúdo.
+    tipos_recebidos: Vec<(String, String)>,
 }
 
 impl TestHarness {
@@ -62,6 +78,7 @@ impl TestHarness {
             eventos,
             perdidos,
             event_buffer: vec![],
+            tipos_recebidos: vec![],
         }
     }
 
@@ -82,7 +99,7 @@ impl TestHarness {
     /// sem leitura enquanto o teste faz requisições.
     async fn assinar_eventos() -> (
         SubscriberClient,
-        mpsc::UnboundedReceiver<(String, EventV1)>,
+        mpsc::UnboundedReceiver<Recebido>,
         Arc<AtomicU64>,
     ) {
         let config = RedisConfig::from_url(&redis_kiss::REDIS_URI).expect("`REDIS_URI`");
@@ -106,15 +123,17 @@ impl TestHarness {
                 match mensagens.recv().await {
                     Ok(mensagem) => {
                         let topico = mensagem.channel.to_string();
-                        let evento = mensagem
-                            .value
-                            .as_str()
-                            .and_then(|texto| serde_json::from_str::<EventV1>(&texto).ok());
-                        let Some(evento) = evento else {
-                            eprintln!("evento ilegível em `{topico}`: {:?}", mensagem.value);
+                        let decodificado = mensagem.value.as_str().and_then(|texto| {
+                            let tipo = serde_json::from_str::<TipoDeEvento>(&texto).ok()?;
+                            let evento = serde_json::from_str::<EventV1>(&texto).ok()?;
+                            Some((tipo.tipo, evento))
+                        });
+                        let Some((tipo, evento)) = decodificado else {
+                            // Só o tópico: o conteúdo pode trazer dado de conta.
+                            eprintln!("evento ilegível em `{topico}`");
                             continue;
                         };
-                        if tx.send((topico, evento)).is_err() {
+                        if tx.send((topico, tipo, evento)).is_err() {
                             break;
                         }
                     }
@@ -131,32 +150,26 @@ impl TestHarness {
     }
 
     /// O que já passou pelo harness, para a mensagem de falha da espera.
+    ///
+    /// Só TIPOS e tópicos, nunca o conteúdo dos eventos (ver `TipoDeEvento`).
     fn resumo_da_espera(&self, topic: &str) -> String {
-        let no_topico: Vec<&EventV1> = self
-            .event_buffer
+        let no_topico: Vec<&str> = self
+            .tipos_recebidos
             .iter()
             .filter(|(t, _)| t == topic)
-            .map(|(_, e)| e)
+            .map(|(_, tipo)| tipo.as_str())
             .collect();
-        let outros = self.event_buffer.len() - no_topico.len();
+        let outros = self.tipos_recebidos.len() - no_topico.len();
         let ultimos: Vec<String> = self
-            .event_buffer
+            .tipos_recebidos
             .iter()
             .rev()
             .filter(|(t, _)| t != topic)
             .take(10)
-            .map(|(t, e)| {
-                let debug = format!("{e:?}");
-                let variante = debug
-                    .split(|c: char| !c.is_alphanumeric() && c != '_')
-                    .next()
-                    .unwrap_or_default()
-                    .to_string();
-                format!("{t}: {variante}")
-            })
+            .map(|(t, tipo)| format!("{t}: {tipo}"))
             .collect();
         format!(
-            "eventos recebidos em `{topic}`: {no_topico:#?}
+            "tipos recebidos em `{topic}`: {no_topico:?}
              eventos em outros tópicos: {outros} (últimos: {ultimos:?})
              mensagens descartadas por atraso: {}",
             self.perdidos.load(Ordering::Relaxed)
@@ -393,11 +406,12 @@ impl TestHarness {
         let prazo = tokio::time::Instant::now() + ESPERA_POR_EVENTO;
         loop {
             match tokio::time::timeout_at(prazo, self.eventos.recv()).await {
-                Ok(Some((msg_topic, payload))) => {
+                Ok(Some((msg_topic, tipo, payload))) => {
                     if topic == msg_topic && predicate(&payload) {
                         return payload;
                     }
 
+                    self.tipos_recebidos.push((msg_topic.clone(), tipo));
                     self.event_buffer.push((msg_topic, payload));
                 }
                 Ok(None) => panic!(
