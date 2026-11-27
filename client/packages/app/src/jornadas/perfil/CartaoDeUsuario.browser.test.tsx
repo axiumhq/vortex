@@ -1,7 +1,7 @@
 import { client } from "nucleo/sdk/client";
 import { chaveDeMembro, type MemberSnapshot, type MessageSnapshot } from "nucleo/sdk/domain";
 import { members, messages, presence } from "nucleo/sdk/adapter";
-import { fecharCartaoDeUsuario } from "nucleo/store/cartaoDeUsuario";
+import { fecharCartaoDeUsuario, fecharPerfilCompleto } from "nucleo/store/cartaoDeUsuario";
 import { irPara, lerLocal } from "nucleo/store/navegacao";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -14,7 +14,7 @@ import { CartaoDeUsuario } from "./CartaoDeUsuario";
 
 const SERVIDOR = "01SRV";
 const CANAL = "01CHN";
-const USUARIO = "01USR";
+const USUARIO = "01M1F7Z73EMXHDHMJARVE8HCSE";
 
 function membroSnap(parcial: Partial<MemberSnapshot> = {}): MemberSnapshot {
   return {
@@ -69,6 +69,7 @@ function mensagemSnap(parcial: Partial<MessageSnapshot> = {}): MessageSnapshot {
 
 beforeEach(() => {
   fecharCartaoDeUsuario();
+  fecharPerfilCompleto();
   irPara(SERVIDOR, CANAL);
   members.set(chaveDeMembro(SERVIDOR, USUARIO), membroSnap());
   presence.set(USUARIO, "online");
@@ -78,6 +79,7 @@ beforeEach(() => {
 afterEach(() => {
   desmontar();
   fecharCartaoDeUsuario();
+  fecharPerfilCompleto();
   vi.restoreAllMocks();
 });
 
@@ -187,5 +189,44 @@ describe("CartaoDeUsuario", () => {
 
     await expect.poll(() => lerLocal()).toEqual({ tipo: "dm", channelId: "01DM" });
     expect(pegar('[data-testid="cartao-de-usuario"]')).toBeNull();
+  });
+
+  it("clicar no nome ou avatar dentro do cartão abre o modal de perfil completo", async () => {
+    vi.spyOn(client.users, "get").mockReturnValue(mockUsuario());
+    vi.spyOn(client.api, "get").mockResolvedValue({ servers: [], users: [] } as never);
+
+    montar(
+      <>
+        <LinhaDeMensagem id="01MSG" servidorId={SERVIDOR} />
+        <CartaoDeUsuario />
+      </>,
+    );
+
+    const botaoAutor = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+      (b) => b.textContent === "zola",
+    );
+    await userEvent.click(botaoAutor!);
+    await expect.poll(() => pegar('[data-testid="cartao-de-usuario"]')).not.toBeNull();
+
+    const cartao = pegar('[data-testid="cartao-de-usuario"]')!;
+    const nomeNoCartao = Array.from(cartao.querySelectorAll<HTMLButtonElement>("button")).find(
+      (b) => b.textContent === "zola",
+    );
+    expect(nomeNoCartao).toBeDefined();
+    await userEvent.click(nomeNoCartao!);
+
+    await expect.poll(() => pegar('[data-testid="modal-de-perfil"]')).not.toBeNull();
+    expect(pegar('[data-testid="cartao-de-usuario"]')).toBeNull();
+
+    const modal = pegar('[data-testid="modal-de-perfil"]')!;
+    expect(modal.textContent).toContain("zola");
+    expect(modal.textContent).toContain("@e");
+    expect(modal.textContent).toContain("ele/dele");
+    expect(modal.textContent).toContain(salas.cartaoDeUsuario.membroDesde);
+    await expect.poll(() => modal.textContent).toContain("Criador do Vortex");
+    await expect.poll(() => modal.textContent).toContain(salas.cartaoDeUsuario.servidoresEmComum);
+
+    await userEvent.keyboard("{Escape}");
+    await expect.poll(() => pegar('[data-testid="modal-de-perfil"]')).toBeNull();
   });
 });

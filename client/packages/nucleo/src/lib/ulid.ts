@@ -72,3 +72,15 @@ export function ulidDoInstante(ms: number): string | undefined {
   }
   return tempo + "0".repeat(TAMANHO - TEMPO);
 }
+
+/** O instante em milissegundos codificado nos 10 primeiros caracteres do ULID, ou `undefined`. */
+export function instanteDoUlid(id: string): number | undefined {
+  if (!ehUlid(id)) return undefined;
+  let ms = 0;
+  for (let i = 0; i < TEMPO; i++) {
+    const valor = ALFABETO.indexOf(id[i] ?? "");
+    if (valor < 0) return undefined;
+    ms = ms * 32 + valor;
+  }
+  return ms;
+}

@@ -74,3 +74,38 @@ export function fecharCartaoSeAinda(abertura: AlvoDoCartao): void {
   if (alvo !== abertura) return;
   fecharCartaoDeUsuario();
 }
+
+/* ----------------------------------------------------- modal de perfil completo */
+
+export type AlvoDoPerfilCompleto = {
+  readonly userId: string;
+  readonly serverId: string | undefined;
+};
+
+let perfilCompleto: AlvoDoPerfilCompleto | null = null;
+const ouvintesPerfil = new Set<() => void>();
+
+export function assinarPerfilCompleto(ouvinte: () => void): () => void {
+  ouvintesPerfil.add(ouvinte);
+  return () => {
+    ouvintesPerfil.delete(ouvinte);
+  };
+}
+
+export function lerPerfilCompleto(): AlvoDoPerfilCompleto | null {
+  return perfilCompleto;
+}
+
+/** Abre o modal de perfil completo e fecha o popover compacto, se estiver aberto. */
+export function abrirPerfilCompleto(userId: string, serverId?: string): void {
+  if (!userId) return;
+  fecharCartaoDeUsuario();
+  perfilCompleto = { userId, serverId: serverId || undefined };
+  for (const o of ouvintesPerfil) o();
+}
+
+export function fecharPerfilCompleto(): void {
+  if (perfilCompleto === null) return;
+  perfilCompleto = null;
+  for (const o of ouvintesPerfil) o();
+}
