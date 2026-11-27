@@ -1,0 +1,158 @@
+.ancora {
+  position: fixed;
+  pointer-events: none;
+}
+
+.caixa {
+  inline-size: min(300px, calc(100vw - var(--vx-space-6)));
+  max-block-size: var(--radix-popper-available-height, calc(100vh - var(--vx-space-6)));
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: var(--vx-radius-lg);
+}
+
+.banner {
+  position: relative;
+  block-size: 72px;
+  background: var(--vx-accent-soft);
+}
+
+.bannerImagem {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-3);
+  padding: 0 var(--vx-space-4) var(--vx-space-4);
+}
+
+.topo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--vx-space-2);
+  margin-block-start: -32px;
+}
+
+.avatarMoldura {
+  position: relative;
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--vx-radius-pill);
+  background: var(--vx-surface-solid);
+}
+
+.seloVoce {
+  padding: 2px var(--vx-space-2);
+  border-radius: var(--vx-radius-pill);
+  background: var(--vx-surface-solid);
+  border: 1px solid var(--vx-border-subtle);
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-badge-size);
+  line-height: var(--vx-type-badge-line);
+  font-weight: var(--vx-type-badge-weight);
+}
+
+.identidade {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.nomeLinha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--vx-space-2);
+  min-inline-size: 0;
+}
+
+.nome {
+  margin: 0;
+  color: var(--vx-text-1);
+  font-size: var(--vx-type-title-size);
+  line-height: var(--vx-type-title-line);
+  font-weight: var(--vx-type-title-weight);
+  overflow-wrap: anywhere;
+}
+
+.cargo {
+  padding: 1px var(--vx-space-2);
+  border-radius: var(--vx-radius-pill);
+  border: 1px solid var(--vx-border-subtle);
+  background: var(--vx-surface-solid);
+  color: var(--vx-text-2);
+  font-size: var(--vx-type-badge-size);
+  line-height: var(--vx-type-badge-line);
+  font-weight: var(--vx-type-badge-weight);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--vx-space-1);
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-caption-size);
+  line-height: var(--vx-type-caption-line);
+}
+
+.usuario {
+  font-family: var(--vx-font-mono);
+  font-size: var(--vx-type-mono-size);
+  line-height: var(--vx-type-mono-line);
+  color: var(--vx-text-2);
+}
+
+.recado {
+  margin: 0;
+  color: var(--vx-text-2);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+  overflow-wrap: anywhere;
+}
+
+.secao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-1);
+  padding-block-start: var(--vx-space-3);
+  border-block-start: 1px solid var(--vx-border-subtle);
+}
+
+.rotulo {
+  margin: 0;
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-label-size);
+  line-height: var(--vx-type-label-line);
+  font-weight: var(--vx-type-label-weight);
+  letter-spacing: var(--vx-type-label-tracking);
+  text-transform: uppercase;
+}
+
+.bio {
+  margin: 0;
+  color: var(--vx-text-2);
+  font-size: var(--vx-type-ui-size);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.acoes {
+  display: flex;
+  gap: var(--vx-space-2);
+  padding-block-start: var(--vx-space-2);
+  border-block-start: 1px solid var(--vx-border-subtle);
+}
+
+.acaoPrincipal {
+  flex: 1;
+}

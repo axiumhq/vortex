@@ -4616,7 +4616,8 @@ function nomeDe(serverId: string, userId: string): string {
     server: serverId,
     user: userId,
   })?.nickname;
-  return apelido || client.users.get(userId)?.username || userId;
+  const usuario = client.users.get(userId);
+  return apelido || usuario?.displayName || usuario?.username || userId;
 }
 
 /**

@@ -20,6 +20,7 @@ import { FaixaDeSalas } from "./FaixaDeSalas";
 import { EsqueletoDeMembros, ListaDeMembros } from "./GavetaConectada";
 import { DialogoDeTransmissao } from "../voz/DialogoDeTransmissao";
 import { useSalaDoPalco } from "../voz/hooks";
+import { CartaoDeUsuario } from "../perfil/CartaoDeUsuario";
 
 /**
  * Chegada (PRD §8 nº 2): depois do primeiro `Ready`, e só se a pessoa ainda não
@@ -99,6 +100,7 @@ export function ShellDasSalas({ rodapeDasSalas }: { rodapeDasSalas?: ReactNode }
       gavetaOculta={(pronto && serverId === undefined && !painelAberto) || palcoAberto}
     />
     <DialogoDeTransmissao />
+    <CartaoDeUsuario />
     </>
   );
 }

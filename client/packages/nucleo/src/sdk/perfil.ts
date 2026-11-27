@@ -597,6 +597,22 @@ export async function lerMeuPerfilCompleto(): Promise<
   }
 }
 
+/**
+ * Bio e banner públicos de uma pessoa, consultados sob demanda ao abrir o cartão.
+ * Retorna `undefined` quando o servidor não respondeu ou o usuário não existe.
+ */
+export async function lerPerfilPublico(
+  userId: string,
+): Promise<{ readonly bio: string; readonly bannerUrl: string | undefined } | undefined> {
+  try {
+    const usuario = client.users.get(userId) ?? (await client.users.fetch(userId));
+    const perfil = await usuario.fetchProfile();
+    return { bio: perfil.content ?? "", bannerUrl: perfil.bannerURL };
+  } catch {
+    return undefined;
+  }
+}
+
 /** O e-mail da conta, ou `undefined` se não deu para consultar. */
 export async function lerMeuEmail(): Promise<string | undefined> {
   try {

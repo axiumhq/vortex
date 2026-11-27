@@ -80,11 +80,23 @@ ol.lista {
 }
 
 .mencao {
+  display: inline;
   padding: 0 var(--vx-space-1);
+  border: 0;
   border-radius: var(--vx-radius-sm);
   background: var(--vx-accent-soft);
   color: var(--vx-accent);
+  font: inherit;
   font-weight: 600;
+  cursor: pointer;
+}
+.mencao:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.mencao:focus-visible {
+  outline: 2px solid var(--vx-focus-ring);
+  outline-offset: 1px;
 }
 
 .emoji {

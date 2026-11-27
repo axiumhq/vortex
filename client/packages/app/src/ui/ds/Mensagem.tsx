@@ -36,6 +36,8 @@ export interface MensagemProps {
    * passou o tratador dele (controle sem ação não aparece).
    */
   acoes?: boolean;
+  /** Clique no avatar ou no nome do autor (ex.: abrir cartão de perfil). */
+  onAbrirAutor?: (e: MouseEvent<HTMLElement>) => void;
   /** O evento vai junto: quem abre um menu ancorado precisa do ponto do clique. */
   onReagir?: (e: MouseEvent<HTMLButtonElement>) => void;
   onResponder?: () => void;
@@ -86,6 +88,7 @@ function MensagemBase({
   resposta,
   anexo,
   acoes = true,
+  onAbrirAutor,
   onReagir,
   onResponder,
   onTopico,
@@ -119,6 +122,15 @@ function MensagemBase({
           <time className={css.horaCompacta} title={horaCompleta} dateTime={dataHora}>{hora}</time>
         ) : continuacao ? (
           <time className={css.horaNoHover} title={horaCompleta} dateTime={dataHora}>{hora}</time>
+        ) : onAbrirAutor ? (
+          <button
+            type="button"
+            className={css.avatarBotao}
+            aria-label={autor.nome}
+            onClick={onAbrirAutor}
+          >
+            {avatar ?? <Avatar nome={autor.nome} id={autor.id} tom={autor.tom} tamanho={36} />}
+          </button>
         ) : (
           (avatar ?? <Avatar nome={autor.nome} id={autor.id} tom={autor.tom} tamanho={36} />)
         )}
@@ -133,7 +145,13 @@ function MensagemBase({
         )}
         {!continuacao && (
           <div className={css.cabecalho}>
-            <span className={css.nome}>{autor.nome}</span>
+            {onAbrirAutor ? (
+              <button type="button" className={juntar(css.nome, css.nomeBotao)} onClick={onAbrirAutor}>
+                {autor.nome}
+              </button>
+            ) : (
+              <span className={css.nome}>{autor.nome}</span>
+            )}
             {!compacta && <time className={css.hora} title={horaCompleta} dateTime={dataHora}>{hora}</time>}
           </div>
         )}

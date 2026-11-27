@@ -78,6 +78,38 @@
   font-weight: var(--vx-type-heading-weight);
 }
 
+.nomeBotao {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+.nomeBotao:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.nomeBotao:focus-visible {
+  outline: 2px solid var(--vx-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--vx-radius-sm);
+}
+
+.avatarBotao {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  border-radius: var(--vx-radius-pill);
+  background: transparent;
+  cursor: pointer;
+}
+.avatarBotao:focus-visible {
+  outline: 2px solid var(--vx-focus-ring);
+  outline-offset: 2px;
+}
+
 /* Na fonte do texto (só a hora da calha do compacto fica em mono, por alinhamento). */
 .hora,
 .horaNoHover {

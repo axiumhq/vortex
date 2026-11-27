@@ -692,7 +692,7 @@ export function toMemberSnapshot(
    */
   eu?: ServerMember,
 ): MemberSnapshot {
-  const displayName = membro?.nickname || user.username;
+  const displayName = membro?.nickname || user.displayName || user.username;
 
   // `roleColour` pode vir `null` do protocolo — sem cargo colorido. `null` e
   // `undefined` significam a mesma coisa para o domínio, e carregar os dois
