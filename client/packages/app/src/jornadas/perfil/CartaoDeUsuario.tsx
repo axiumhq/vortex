@@ -1,8 +1,9 @@
 import { usuarioLocalId } from "nucleo/sdk/adapter";
 import { chaveDeMembro } from "nucleo/sdk/domain";
-import { lerPerfilPublico } from "nucleo/sdk/perfil";
+import { lerMeuPerfil, lerPerfilPublico } from "nucleo/sdk/perfil";
 import { abrirConversaCom } from "nucleo/sdk/social";
 import {
+  abrirPerfilCompleto,
   assinarCartaoDeUsuario,
   consumirOrigemDoCartao,
   fecharCartaoDeUsuario,
@@ -20,6 +21,9 @@ import { Avatar, Botao } from "../../ui/ds";
 import { Mensagem as IconeMensagem } from "../../ui/icones";
 import { AncoraDoPopover, ConteudoDoPopover, Popover } from "../../ui/primitivos/Flutuantes";
 import css from "./CartaoDeUsuario.module.css";
+import { ModalDePerfil } from "./ModalDePerfil";
+
+const TITULO_DO_CARTAO = "cartao-de-usuario-titulo";
 
 type PerfilCarregado = {
   readonly para: string;
@@ -31,6 +35,8 @@ function Conteudo({ alvo }: { alvo: AlvoDoCartao }) {
   const membro = useMembro(chaveDeMembro(alvo.serverId ?? "", alvo.userId));
   const pessoa = usePessoa(alvo.userId);
   const presenca = usePresence(alvo.userId);
+  const ehEu = alvo.userId === usuarioLocalId();
+  const meuPerfil = ehEu ? lerMeuPerfil() : undefined;
   const [perfil, setPerfil] = useState<PerfilCarregado | undefined>();
   const [abrindoDm, setAbrindoDm] = useState(false);
 
@@ -45,17 +51,20 @@ function Conteudo({ alvo }: { alvo: AlvoDoCartao }) {
     };
   }, [alvo.userId]);
 
-  const nome = membro?.displayName ?? pessoa?.displayName ?? salas.alguem;
-  const username = membro?.username ?? pessoa?.username;
-  const pronomes = membro?.pronomes;
+  const nome = membro?.displayName ?? pessoa?.displayName ?? meuPerfil?.displayName ?? salas.alguem;
+  const username = membro?.username ?? pessoa?.username ?? meuPerfil?.username;
+  const pronomes = membro?.pronomes ?? (meuPerfil?.pronomes || undefined);
   const statusTexto = membro?.statusTexto;
   const cargo = membro?.cargo;
   const cor = membro?.cor;
-  const avatarUrl = membro?.avatarUrl;
-  const ehEu = alvo.userId === usuarioLocalId();
+  const avatarUrl = membro?.avatarUrl ?? meuPerfil?.avatarUrl;
   const dadosPublicos = perfil?.para === alvo.userId ? perfil : undefined;
   const bio = dadosPublicos?.bio.trim() || undefined;
   const bannerUrl = dadosPublicos?.bannerUrl;
+
+  const abrirCompleto = () => {
+    abrirPerfilCompleto(alvo.userId, alvo.serverId);
+  };
 
   return (
     <div data-testid="cartao-de-usuario">
@@ -65,16 +74,29 @@ function Conteudo({ alvo }: { alvo: AlvoDoCartao }) {
 
       <div className={css.corpo}>
         <div className={css.topo}>
-          <div className={css.avatarMoldura}>
+          <button
+            type="button"
+            className={css.avatarMoldura}
+            aria-label={salas.cartaoDeUsuario.abrirPerfilCompleto(nome)}
+            title={salas.cartaoDeUsuario.verPerfilCompleto}
+            onClick={abrirCompleto}
+          >
             <Avatar nome={nome} id={alvo.userId} tamanho={64} imagem={avatarUrl} status={presenca} />
-          </div>
+          </button>
           {ehEu && <span className={css.seloVoce}>{salas.cartaoDeUsuario.voce}</span>}
         </div>
 
         <div className={css.identidade}>
           <div className={css.nomeLinha}>
-            <h3 className={css.nome} style={cor ? { color: cor } : undefined}>
-              {nome}
+            <h3 id={TITULO_DO_CARTAO} className={css.nome} style={cor ? { color: cor } : undefined}>
+              <button
+                type="button"
+                className={css.nomeBotao}
+                title={salas.cartaoDeUsuario.verPerfilCompleto}
+                onClick={abrirCompleto}
+              >
+                {nome}
+              </button>
             </h3>
             {cargo !== undefined && <span className={css.cargo}>{cargo}</span>}
           </div>
@@ -100,8 +122,8 @@ function Conteudo({ alvo }: { alvo: AlvoDoCartao }) {
           </section>
         )}
 
-        {!ehEu && (
-          <div className={css.acoes}>
+        <div className={css.acoes}>
+          {!ehEu && (
             <Botao
               variante="secundario"
               tamanho="sm"
@@ -122,8 +144,16 @@ function Conteudo({ alvo }: { alvo: AlvoDoCartao }) {
             >
               {salas.cartaoDeUsuario.enviarMensagem}
             </Botao>
-          </div>
-        )}
+          )}
+          <Botao
+            variante="fantasma"
+            tamanho="sm"
+            className={ehEu ? css.acaoPrincipal : undefined}
+            onClick={abrirCompleto}
+          >
+            {salas.cartaoDeUsuario.verPerfilCompleto}
+          </Botao>
+        </div>
       </div>
     </div>
   );
@@ -137,42 +167,45 @@ export function CartaoDeUsuario() {
   const alvo = useSyncExternalStore(assinarCartaoDeUsuario, lerAlvoDoCartao);
 
   return (
-    <Popover
-      open={alvo !== null}
-      onOpenChange={(aberto) => {
-        if (!aberto) fecharCartaoDeUsuario();
-      }}
-    >
-      {alvo !== null && (
-        <AncoraDoPopover asChild>
-          <span
-            aria-hidden="true"
-            className={css.ancora}
-            style={{
-              insetInlineStart: alvo.x,
-              insetBlockStart: alvo.y,
-              inlineSize: alvo.largura,
-              blockSize: alvo.altura,
-            }}
-          />
-        </AncoraDoPopover>
-      )}
-      <ConteudoDoPopover
-        aria-label={salas.cartaoDeUsuario.rotulo(alvo?.userId ?? "")}
-        className={css.caixa}
-        side={alvo?.lado ?? "right"}
-        align="start"
-        collisionPadding={12}
-        onCloseAutoFocus={(e) => {
-          const origem = consumirOrigemDoCartao();
-          if (origem?.isConnected) {
-            e.preventDefault();
-            origem.focus();
-          }
+    <>
+      <Popover
+        open={alvo !== null}
+        onOpenChange={(aberto) => {
+          if (!aberto) fecharCartaoDeUsuario();
         }}
       >
-        {alvo !== null && <Conteudo key={`${alvo.serverId ?? ""}:${alvo.userId}`} alvo={alvo} />}
-      </ConteudoDoPopover>
-    </Popover>
+        {alvo !== null && (
+          <AncoraDoPopover asChild>
+            <span
+              aria-hidden="true"
+              className={css.ancora}
+              style={{
+                insetInlineStart: alvo.x,
+                insetBlockStart: alvo.y,
+                inlineSize: alvo.largura,
+                blockSize: alvo.altura,
+              }}
+            />
+          </AncoraDoPopover>
+        )}
+        <ConteudoDoPopover
+          aria-labelledby={TITULO_DO_CARTAO}
+          className={css.caixa}
+          side={alvo?.lado ?? "right"}
+          align="start"
+          collisionPadding={12}
+          onCloseAutoFocus={(e) => {
+            const origem = consumirOrigemDoCartao();
+            if (origem?.isConnected) {
+              e.preventDefault();
+              origem.focus();
+            }
+          }}
+        >
+          {alvo !== null && <Conteudo key={`${alvo.serverId ?? ""}:${alvo.userId}`} alvo={alvo} />}
+        </ConteudoDoPopover>
+      </Popover>
+      <ModalDePerfil />
+    </>
   );
 }

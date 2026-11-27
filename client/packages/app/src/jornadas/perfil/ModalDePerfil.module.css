@@ -1,0 +1,259 @@
+.dialogo {
+  inline-size: min(520px, calc(100vw - var(--vx-space-6)));
+  max-block-size: min(85vh, 680px);
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: var(--vx-radius-lg);
+}
+
+.banner {
+  position: relative;
+  block-size: 120px;
+  background: var(--vx-accent-soft);
+}
+
+.bannerImagem {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-4);
+  padding: 0 var(--vx-space-5) var(--vx-space-5);
+}
+
+.topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--vx-space-3);
+  margin-block-start: -40px;
+}
+
+.avatarMoldura {
+  position: relative;
+  display: inline-flex;
+  padding: 4px;
+  border-radius: var(--vx-radius-pill);
+  background: var(--vx-surface-solid);
+}
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--vx-space-2);
+  padding-block-end: var(--vx-space-1);
+}
+
+.seloVoce {
+  padding: 2px var(--vx-space-2);
+  border-radius: var(--vx-radius-pill);
+  border: 1px solid var(--vx-border-subtle);
+  background: var(--vx-surface-solid);
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-badge-size);
+  line-height: var(--vx-type-badge-line);
+  font-weight: var(--vx-type-badge-weight);
+}
+
+.identidade {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-1);
+  min-inline-size: 0;
+}
+
+.nome {
+  margin: 0;
+  color: var(--vx-text-1);
+  font-size: var(--vx-type-display-size);
+  line-height: var(--vx-type-display-line);
+  font-weight: var(--vx-type-display-weight);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--vx-space-2);
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+}
+
+.usuarioBotao {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--vx-space-1);
+  padding: 2px var(--vx-space-2);
+  border: 1px solid var(--vx-border-subtle);
+  border-radius: var(--vx-radius-sm);
+  background: var(--vx-surface-solid);
+  color: var(--vx-text-2);
+  font-family: var(--vx-font-mono);
+  font-size: var(--vx-type-mono-size);
+  line-height: var(--vx-type-mono-line);
+  cursor: pointer;
+}
+.usuarioBotao:hover {
+  background: var(--vx-state-hover);
+  color: var(--vx-text-1);
+}
+.usuarioBotao:focus-visible {
+  outline: 2px solid var(--vx-focus-ring);
+  outline-offset: 2px;
+}
+
+.recado {
+  margin: 0;
+  color: var(--vx-text-2);
+  font-size: var(--vx-type-body-size);
+  line-height: var(--vx-type-body-line);
+  overflow-wrap: anywhere;
+}
+
+.secao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-2);
+  padding-block-start: var(--vx-space-3);
+  border-block-start: 1px solid var(--vx-border-subtle);
+}
+
+.rotulo {
+  margin: 0;
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-label-size);
+  line-height: var(--vx-type-label-line);
+  font-weight: var(--vx-type-label-weight);
+  letter-spacing: var(--vx-type-label-tracking);
+  text-transform: uppercase;
+}
+
+.bio {
+  margin: 0;
+  color: var(--vx-text-2);
+  font-size: var(--vx-type-body-size);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.nota {
+  margin: 0;
+  color: var(--vx-text-3);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+}
+
+.datas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--vx-space-3);
+}
+
+.dado {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.dadoValor {
+  color: var(--vx-text-1);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+}
+
+.cargos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vx-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cargo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--vx-space-1);
+  padding: 2px var(--vx-space-2);
+  border-radius: var(--vx-radius-pill);
+  border: 1px solid var(--vx-border-subtle);
+  background: var(--vx-surface-solid);
+  color: var(--vx-text-2);
+  font-size: var(--vx-type-caption-size);
+  line-height: var(--vx-type-caption-line);
+}
+
+.cargoPonto {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: var(--vx-radius-pill);
+  background: var(--vx-text-3);
+  flex: none;
+}
+
+.emComumGrade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--vx-space-4);
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vx-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--vx-space-2);
+  min-block-size: 32px;
+  color: var(--vx-text-1);
+  font-size: var(--vx-type-ui-size);
+  line-height: var(--vx-type-ui-line);
+}
+
+.itemBotao {
+  display: flex;
+  align-items: center;
+  gap: var(--vx-space-2);
+  inline-size: 100%;
+  min-block-size: 32px;
+  padding: 0 var(--vx-space-2);
+  border: 0;
+  border-radius: var(--vx-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.itemBotao:hover {
+  background: var(--vx-state-hover);
+}
+.itemBotao:focus-visible {
+  outline: 2px solid var(--vx-focus-ring);
+  outline-offset: -2px;
+}
+
+.itemNome {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

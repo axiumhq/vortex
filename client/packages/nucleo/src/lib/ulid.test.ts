@@ -1,7 +1,7 @@
 import { decodeTime, ulid } from "ulid";
 import { describe, expect, it } from "vitest";
 
-import { ehUlid, ulidAnterior, ulidDoInstante } from "./ulid";
+import { ehUlid, instanteDoUlid, ulidAnterior, ulidDoInstante } from "./ulid";
 
 /**
  * As duas contas de cursor. O que elas guardam é a ORDEM: marcar como não lida
@@ -63,5 +63,19 @@ describe("ulidDoInstante", () => {
     expect(ulidDoInstante(-1)).toBeUndefined();
     expect(ulidDoInstante(Number.NaN)).toBeUndefined();
     expect(ulidDoInstante(2 ** 48)).toBeUndefined();
+  });
+});
+
+describe("instanteDoUlid", () => {
+  it("decodifica o mesmo milissegundo que a biblioteca ulid", () => {
+    const t = Date.UTC(2026, 8, 13, 12, 0, 0);
+    const id = ulid(t);
+    expect(instanteDoUlid(id)).toBe(t);
+    expect(instanteDoUlid(id)).toBe(decodeTime(id));
+  });
+
+  it("retorna undefined para strings que não são ULID", () => {
+    expect(instanteDoUlid("nao-e-ulid")).toBeUndefined();
+    expect(instanteDoUlid("")).toBeUndefined();
   });
 });
