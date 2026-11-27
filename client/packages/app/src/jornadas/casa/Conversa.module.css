@@ -129,6 +129,28 @@
   font-size: var(--vx-type-ui-size);
   line-height: var(--vx-type-ui-line);
 }
+.itemBotao {
+  display: flex;
+  align-items: center;
+  gap: var(--vx-space-2);
+  inline-size: 100%;
+  min-block-size: 36px;
+  padding: 0 var(--vx-space-2);
+  border: 0;
+  border-radius: var(--vx-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.itemBotao:hover {
+  background: var(--vx-state-hover);
+}
+.itemBotao:focus-visible {
+  outline: 2px solid var(--vx-focus-ring);
+  outline-offset: -2px;
+}
 .itemNome {
   overflow: hidden;
   text-overflow: ellipsis;

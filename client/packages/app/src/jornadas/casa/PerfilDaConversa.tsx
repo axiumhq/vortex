@@ -1,5 +1,6 @@
 import { usuarioLocalId } from "nucleo/sdk/adapter";
 import { bloquear, buscarEmComum, denunciarPessoa, desbloquear, lerGrupo, type EmComum } from "nucleo/sdk/social";
+import { abrirCartaoDeUsuario } from "nucleo/store/cartaoDeUsuario";
 import { toast } from "nucleo/ui-logica/toastStore";
 import { useChannel, usePessoa, useServer } from "nucleo/store/hooks";
 import { useEffect, useState } from "react";
@@ -159,8 +160,16 @@ function PessoaDoGrupo({ id }: { id: string }) {
   const nome = pessoa?.displayName ?? casa.grupo.voce;
   return (
     <li className={css.item}>
-      <Avatar nome={nome} id={id} tamanho={28} status={pessoa?.status} />
-      <span className={css.itemNome}>{id === usuarioLocalId() ? `${nome} (${casa.grupo.voce})` : nome}</span>
+      <button
+        type="button"
+        className={css.itemBotao}
+        onClick={(e) => {
+          abrirCartaoDeUsuario(id, e.currentTarget, { lado: "left" });
+        }}
+      >
+        <Avatar nome={nome} id={id} tamanho={28} status={pessoa?.status} />
+        <span className={css.itemNome}>{id === usuarioLocalId() ? `${nome} (${casa.grupo.voce})` : nome}</span>
+      </button>
     </li>
   );
 }

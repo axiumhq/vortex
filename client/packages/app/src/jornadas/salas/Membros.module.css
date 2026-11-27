@@ -23,15 +23,25 @@
   display: flex;
   align-items: center;
   gap: var(--vx-space-2);
+  inline-size: 100%;
   block-size: 100%;
   padding-inline: var(--vx-space-2);
+  border: 0;
   border-radius: var(--vx-radius-sm);
+  background: transparent;
   color: var(--vx-text-1);
+  font-family: var(--vx-font-sans);
   font-size: var(--vx-type-ui-size);
   line-height: var(--vx-type-ui-line);
+  text-align: start;
+  cursor: pointer;
 }
 .membro:hover {
   background: var(--vx-state-hover);
+}
+.membro:focus-visible {
+  outline: 2px solid var(--vx-focus-ring);
+  outline-offset: -2px;
 }
 .membro[data-offline] {
   color: var(--vx-text-3);
@@ -59,7 +69,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  inline-size: 100%;
   block-size: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--vx-radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+.soIcone:hover {
+  background: var(--vx-state-hover);
+}
+.soIcone:focus-visible {
+  outline: 2px solid var(--vx-focus-ring);
+  outline-offset: -2px;
 }
 .cabecalho {
   display: flex;

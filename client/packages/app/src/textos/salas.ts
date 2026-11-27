@@ -42,4 +42,11 @@ export const salas = {
     copiado: "Link copiado",
     rotuloDoLink: "Link do convite",
   },
+  cartaoDeUsuario: {
+    rotulo: (nome: string) => `Perfil de ${nome}`,
+    verPerfil: (nome: string) => `Ver perfil de ${nome}`,
+    sobre: "Sobre",
+    enviarMensagem: "Enviar mensagem",
+    voce: "Você",
+  },
 } as const;

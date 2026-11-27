@@ -3,6 +3,7 @@ import { memo, useEffect, useState } from "react";
 import { realcar, realceEmCache } from "nucleo/markdown/realce";
 import { urlDeEmoji } from "nucleo/sdk/anexos";
 import { chaveDeMembro, type BlocoDeMensagem, type TrechoDeMensagem } from "nucleo/sdk/domain";
+import { abrirCartaoDeUsuario } from "nucleo/store/cartaoDeUsuario";
 import { useMembro } from "nucleo/store/hooks";
 
 import { chat } from "../../textos";
@@ -76,7 +77,20 @@ const Codigo = memo(function Codigo({ valor, lingua }: { valor: string; lingua: 
 
 function Mencao({ userId, servidorId }: { userId: string; servidorId: string }) {
   const membro = useMembro(chaveDeMembro(servidorId, userId));
-  return <span className={css.mencao}>@{membro?.displayName ?? chat.autorDesconhecido}</span>;
+  return (
+    <button
+      type="button"
+      className={css.mencao}
+      onClick={(e) => {
+        abrirCartaoDeUsuario(userId, e.currentTarget, {
+          serverId: servidorId || undefined,
+          lado: "bottom",
+        });
+      }}
+    >
+      @{membro?.displayName ?? chat.autorDesconhecido}
+    </button>
+  );
 }
 
 function EmojiPersonalizado({ id }: { id: string }) {

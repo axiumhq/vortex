@@ -1,5 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { chaveDeMembro, SEM_CARGO } from "nucleo/sdk/domain";
+import { abrirCartaoDeUsuario } from "nucleo/store/cartaoDeUsuario";
 import {
   useConexao,
   useMembro,
@@ -50,13 +51,28 @@ function Membro({
   );
   if (modo === "icones") {
     return (
-      <div className={css.soIcone} title={nome}>
+      <button
+        type="button"
+        className={css.soIcone}
+        title={nome}
+        aria-label={salas.cartaoDeUsuario.verPerfil(nome)}
+        onClick={(e) => {
+          abrirCartaoDeUsuario(id, e.currentTarget, { serverId, lado: "left" });
+        }}
+      >
         {avatar}
-      </div>
+      </button>
     );
   }
   return (
-    <div className={css.membro} data-offline={presenca === "offline" || undefined}>
+    <button
+      type="button"
+      className={css.membro}
+      data-offline={presenca === "offline" || undefined}
+      onClick={(e) => {
+        abrirCartaoDeUsuario(id, e.currentTarget, { serverId, lado: "left" });
+      }}
+    >
       {avatar}
       <span className={css.textos}>
         <span className={css.nome}>{nome}</span>
@@ -66,7 +82,7 @@ function Membro({
           </span>
         )}
       </span>
-    </div>
+    </button>
   );
 }
 

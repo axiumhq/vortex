@@ -4,6 +4,7 @@ import { pode } from "nucleo/sdk/permissoes";
 import { assinarDensidade, lerDensidade } from "nucleo/store/densidade";
 import { assinarAparencia, lerAparencia } from "nucleo/store/aparencia";
 import { useMessage, useNomeDoMembro } from "nucleo/store/hooks";
+import { abrirCartaoDeUsuario } from "nucleo/store/cartaoDeUsuario";
 import { abrirSeletorDeReacao } from "nucleo/store/seletorDeReacao";
 import { responderA } from "nucleo/store/resposta";
 import { memo, useSyncExternalStore } from "react";
@@ -97,6 +98,16 @@ function LinhaBase({ id, servidorId, grupo }: LinhaDeMensagemProps) {
             destacada={m.mencionaVoce}
             esmaecida={!enviada}
             acoes={enviada && !editando}
+            onAbrirAutor={
+              m.authorId
+                ? (e) => {
+                    abrirCartaoDeUsuario(m.authorId!, e.currentTarget, {
+                      serverId: servidorId || undefined,
+                      lado: "right",
+                    });
+                  }
+                : undefined
+            }
             onReagir={podeReagir ? (e) => { abrirSeletorDeReacao(id, e.currentTarget); } : undefined}
             onResponder={
               podeResponder
