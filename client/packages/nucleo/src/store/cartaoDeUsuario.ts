@@ -21,6 +21,7 @@ export type AlvoDoCartao = {
 };
 
 let alvo: AlvoDoCartao | null = null;
+let origemDoFoco: HTMLElement | null = null;
 
 const ouvintes = new Set<() => void>();
 
@@ -35,6 +36,13 @@ export function lerAlvoDoCartao(): AlvoDoCartao | null {
   return alvo;
 }
 
+/** O controle que abriu o cartão, só para devolver o foco ao fechar (se ainda estiver no DOM). */
+export function consumirOrigemDoCartao(): HTMLElement | null {
+  const el = origemDoFoco;
+  origemDoFoco = null;
+  return el;
+}
+
 export function abrirCartaoDeUsuario(
   userId: string,
   ancora: Element | null,
@@ -42,6 +50,7 @@ export function abrirCartaoDeUsuario(
 ): void {
   if (!userId) return;
   const r = ancora?.getBoundingClientRect();
+  origemDoFoco = ancora instanceof HTMLElement ? ancora : null;
   alvo = {
     userId,
     serverId: opcoes?.serverId || undefined,
@@ -58,4 +67,10 @@ export function fecharCartaoDeUsuario(): void {
   if (alvo === null) return;
   alvo = null;
   for (const o of ouvintes) o();
+}
+
+/** Fecha apenas se o cartão aberto ainda for a mesma abertura que disparou a ação assíncrona. */
+export function fecharCartaoSeAinda(abertura: AlvoDoCartao): void {
+  if (alvo !== abertura) return;
+  fecharCartaoDeUsuario();
 }

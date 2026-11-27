@@ -4,7 +4,9 @@ import { lerPerfilPublico } from "nucleo/sdk/perfil";
 import { abrirConversaCom } from "nucleo/sdk/social";
 import {
   assinarCartaoDeUsuario,
+  consumirOrigemDoCartao,
   fecharCartaoDeUsuario,
+  fecharCartaoSeAinda,
   lerAlvoDoCartao,
   type AlvoDoCartao,
 } from "nucleo/store/cartaoDeUsuario";
@@ -107,13 +109,14 @@ function Conteudo({ alvo }: { alvo: AlvoDoCartao }) {
               className={css.acaoPrincipal}
               carregando={abrindoDm}
               onClick={() => {
+                const abertura = alvo;
                 setAbrindoDm(true);
-                void abrirConversaCom(alvo.userId).then((canalId) => {
+                void abrirConversaCom(abertura.userId).then((canalId) => {
                   setAbrindoDm(false);
                   if (!canalId) return;
                   fecharPalco();
                   abrirConversa(canalId);
-                  fecharCartaoDeUsuario();
+                  fecharCartaoSeAinda(abertura);
                 });
               }}
             >
@@ -160,6 +163,13 @@ export function CartaoDeUsuario() {
         side={alvo?.lado ?? "right"}
         align="start"
         collisionPadding={12}
+        onCloseAutoFocus={(e) => {
+          const origem = consumirOrigemDoCartao();
+          if (origem?.isConnected) {
+            e.preventDefault();
+            origem.focus();
+          }
+        }}
       >
         {alvo !== null && <Conteudo key={`${alvo.serverId ?? ""}:${alvo.userId}`} alvo={alvo} />}
       </ConteudoDoPopover>

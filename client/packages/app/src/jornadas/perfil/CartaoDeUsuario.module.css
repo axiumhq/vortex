@@ -5,8 +5,10 @@
 
 .caixa {
   inline-size: min(300px, calc(100vw - var(--vx-space-6)));
+  max-block-size: var(--radix-popper-available-height, calc(100vh - var(--vx-space-6)));
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   border-radius: var(--vx-radius-lg);
 }
 

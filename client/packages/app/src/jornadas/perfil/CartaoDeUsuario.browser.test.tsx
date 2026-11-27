@@ -124,6 +124,7 @@ describe("CartaoDeUsuario", () => {
 
     await userEvent.keyboard("{Escape}");
     await expect.poll(() => pegar('[data-testid="cartao-de-usuario"]')).toBeNull();
+    expect(document.activeElement).toBe(botaoNome);
   });
 
   it("abre ao clicar em uma menção no corpo da mensagem", async () => {
